@@ -1,0 +1,14 @@
+version = 0.1
+
+[default.deploy.parameters]
+stack_name = "feature-flag-stack"
+resolve_s3 = true
+s3_prefix = "feature-flag-stack"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+disable_rollback = true
+image_repositories = []
+parameter_overrides = "ExistingJWTSecretArn=\"arn:aws:secretsmanager:us-east-1:701881522568:secret:feature-flag/jwt-znThou\""
+
+[default.global.parameters]
+region = "us-east-1"

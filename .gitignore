@@ -1,0 +1,7 @@
+*.env
+*__pycache__
+*.coverage
+*htmlcov
+*.pytest_cache
+*venv
+*tmp.py
