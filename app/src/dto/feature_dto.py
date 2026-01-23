@@ -15,4 +15,4 @@ class UpdateFeatureEnvDTO(BaseModel):
 class EvaluateDTO(BaseModel):
     feature: str
     environment: Environment
-    context: dict
+    context: dict | None = None

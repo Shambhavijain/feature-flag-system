@@ -1,0 +1,9 @@
+[run]
+source = src
+branch = True
+
+[report]
+show_missing = True
+omit =
+    tests/*
+    */conftest.py
