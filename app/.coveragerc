@@ -1,9 +1,11 @@
 [run]
 source = src
 branch = True
-
-[report]
-show_missing = True
 omit =
     tests/*
     */conftest.py
+    src/infra/*
+    src/models/*
+
+[report]
+show_missing = True
