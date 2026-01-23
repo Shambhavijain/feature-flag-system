@@ -12,7 +12,6 @@ except Exception:
 
 _cached_secrets = None
 
-
 def _load_secrets():
     global _cached_secrets
 
@@ -28,7 +27,6 @@ def _load_secrets():
     _cached_secrets = json.loads(response["SecretString"])
 
     return _cached_secrets
-
 
 def get_env(key: str, default=None):
     value = os.getenv(key)

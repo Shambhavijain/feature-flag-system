@@ -10,7 +10,6 @@ from dto.feature_dto import (
     EvaluateDTO,
 )
 from error_handling.exceptions import(
-    AppException, 
     EnvironmentNotFoundException,
     FeatureNotFoundException ,
     FeatureAlreadyExistsException
@@ -38,7 +37,7 @@ class FeatureService:
             old=None,
             new={
                 "description":request_feature.description,
-                "enviroments":request_feature.environments,
+                "environments":request_feature.environments,
             },
         )
 

@@ -1,4 +1,5 @@
 import boto3
+
 from infra.env import get_env
 
 dynamodb = boto3.resource(

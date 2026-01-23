@@ -1,9 +1,11 @@
-from dotenv import load_dotenv
-from infra.env import get_env
 import bcrypt
-from passlib.context import CryptContext
+from dotenv import load_dotenv
 from typing import Dict, Any
 from jose import jwt, JWTError, ExpiredSignatureError
+
+from infra.env import get_env
+from passlib.context import CryptContext
+
 
 load_dotenv()
 
@@ -12,7 +14,6 @@ JWT_ALGORITHM = get_env("JWT_ALGORITHM", "HS256")
 
 if not JWT_SECRET_KEY:
     raise RuntimeError("JWT_SECRET_KEY is not set")
-
 
 def hash_password(password: str) -> str:
     salt = bcrypt.gensalt()

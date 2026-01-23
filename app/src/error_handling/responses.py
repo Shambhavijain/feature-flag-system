@@ -6,7 +6,6 @@ def success_response(data,status_code=200):
         "body": json.dumps(data)
     }
 
-
 def error_response(message, status_code):
     return {
         "statusCode": status_code,

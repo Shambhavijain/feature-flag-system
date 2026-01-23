@@ -4,10 +4,6 @@ class AppException(Exception):
         self.status_code = status_code
         super().__init__(message)
 
-class RepositoryException(AppException):
-    def __init__(self, message="Data access error"):
-        super().__init__(message, 500)
-
 class ValidationException(AppException):
     def __init__(self, message: str):
         super().__init__(message, 400)

@@ -12,7 +12,6 @@ class SignuprequestDTO(BaseModel):
     def validate_password(cls, password: str) -> str:
         return validate_password(password)
 
-
 class LoginRequestDTO(BaseModel):
     
     email: EmailStr

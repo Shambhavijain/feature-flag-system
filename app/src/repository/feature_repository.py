@@ -1,8 +1,10 @@
 from botocore.exceptions import ClientError
 from datetime import datetime, timezone
 
-from infra.dynamodb import table
-from error_handling.exceptions import ConflictException
+from error_handling.exceptions import (
+    ConflictException,
+    EnvironmentNotFoundException,
+)
 
 
 class FeatureRepository:
@@ -29,7 +31,8 @@ class FeatureRepository:
                     "description": description,
                     "created_at": now,
                 },
-                "ConditionExpression": "attribute_not_exists(SK)",
+                
+                "ConditionExpression": "attribute_not_exists(PK)",
             }
         })
 
@@ -58,47 +61,54 @@ class FeatureRepository:
                 raise ConflictException("Feature already exists")
             raise
 
-
-
-    def put_env(self, feature_name: str, env: str, enabled: bool, rollout_end_at: str | None):
+    def put_env(
+        self,
+        feature_name: str,
+        env: str,
+        enabled: bool,
+        rollout_end_at: str | None,
+    ):
         feature_name = feature_name.lower()
         env = env.lower()
-        self.table.update_item(
-            Key={
-                "PK": f"FEATURE#{feature_name}",
-                "SK": f"ENV#{env}",
-            },
-            UpdateExpression="""
-                SET enabled = :enabled,
-                    rollout_end_at = :rollout,
-                    updated_at = :updated
-            """,
-            ConditionExpression="attribute_exists(PK) AND attribute_exists(SK)",
-            ExpressionAttributeValues={
-                ":enabled": enabled,
-                ":rollout": rollout_end_at,
-                ":updated": datetime.now(timezone.utc).isoformat(),
-            },
-        )
 
+        try:
+            self.table.update_item(
+                Key={
+                    "PK": f"FEATURE#{feature_name}",
+                    "SK": f"ENV#{env}",
+                },
+                UpdateExpression="""
+                    SET enabled = :enabled,
+                        rollout_end_at = :rollout,
+                        updated_at = :updated
+                """,
+                ConditionExpression="attribute_exists(PK) AND attribute_exists(SK)",
+                ExpressionAttributeValues={
+                    ":enabled": enabled,
+                    ":rollout": rollout_end_at,
+                    ":updated": datetime.now(timezone.utc).isoformat(),
+                },
+            )
+        except ClientError as e:
+            if e.response["Error"]["Code"] == "ConditionalCheckFailedException":
+                raise EnvironmentNotFoundException(feature_name, env)
+            raise
 
     def get_env(self, feature_name: str, env: str):
-        feature_name = feature_name.lower()
         response = self.table.get_item(
             Key={
-                "PK": f"FEATURE#{feature_name}",
-                "SK": f"ENV#{env}"
+                "PK": f"FEATURE#{feature_name.lower()}",
+                "SK": f"ENV#{env.lower()}",
             }
         )
         return response.get("Item")
 
     def delete_env(self, feature_name: str, env: str):
-        feature_name = feature_name.lower()
         try:
             self.table.delete_item(
                 Key={
-                    "PK": f"FEATURE#{feature_name}",
-                    "SK": f"ENV#{env}",
+                    "PK": f"FEATURE#{feature_name.lower()}",
+                    "SK": f"ENV#{env.lower()}",
                 },
                 ConditionExpression="attribute_exists(PK) AND attribute_exists(SK)",
             )
@@ -107,10 +117,8 @@ class FeatureRepository:
                 raise EnvironmentNotFoundException(feature_name, env)
             raise
 
-   
     def delete_feature(self, feature_name: str):
-        feature_name=feature_name.lower()
-        pk = f"FEATURE#{feature_name}"
+        pk = f"FEATURE#{feature_name.lower()}"
 
         response = self.table.query(
             KeyConditionExpression="PK = :pk",
@@ -129,23 +137,22 @@ class FeatureRepository:
                         "SK": item["SK"],
                     }
                 )
+
     def get_feature_items(self, feature_name: str):
-        feature_name = feature_name.lower()
-        pk = f"FEATURE#{feature_name}"
         response = self.table.query(
             KeyConditionExpression="PK = :pk",
-            ExpressionAttributeValues={":pk": pk},
+            ExpressionAttributeValues={
+                ":pk": f"FEATURE#{feature_name.lower()}",
+            },
         )
         return response.get("Items", [])
 
     def get_audit_logs(self, feature_name: str):
-        feature_name = feature_name.lower()
-        pk = f"FEATURE#{feature_name}"
         response = self.table.query(
             KeyConditionExpression="PK = :pk AND begins_with(SK, :audit)",
             ExpressionAttributeValues={
-                ":pk": pk,
+                ":pk": f"FEATURE#{feature_name.lower()}",
                 ":audit": "AUDIT#",
             },
         )
-        return response.get("Items", [])            
+        return response.get("Items", [])

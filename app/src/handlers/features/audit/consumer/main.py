@@ -1,6 +1,8 @@
 import json
 import logging
+
 from infra.dynamodb import table
+
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)

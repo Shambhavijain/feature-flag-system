@@ -9,7 +9,6 @@ class FeatureMeta:
     description: str
     created_at: str
 
-
 @dataclass
 class FeatureEnv:
     feature_name: str
