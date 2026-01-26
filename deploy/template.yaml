@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
-Description: Feature Flag Management System with Auth and Audit (SQS)
+Description: Feature Flag Management System with Auth and Audit (SQS) - using HTTP API (payload v1.0)
 
 Parameters:
   ExistingJWTSecretArn:
@@ -23,7 +23,6 @@ Globals:
       - x86_64
     Environment:
       Variables:
-        
         DDB_TABLE_NAME: !Ref ExistingDdbTableName
         AUDIT_QUEUE_URL: !Ref ExistingAuditQueueUrl
         JWT_SECRET_ARN: !Ref ExistingJWTSecretArn
@@ -43,16 +42,25 @@ Resources:
       BuildProperties:
         PIP_DEPENDENCIES_FILE: requirements.txt
 
-
-  FeatureFlagAPI:
-    Type: AWS::Serverless::Api
+  # ---------------------------
+  # HTTP API (replacing REST API)
+  # ---------------------------
+  FeatureFlagHTTPApi:
+    Type: AWS::Serverless::HttpApi
     Properties:
-      Name: FeatureFlagAPI
       StageName: Dev
-      Cors:
-        AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
-        AllowHeaders: "'Content-Type,Authorization'"
-        AllowOrigin: "'*'"
+      CorsConfiguration:
+        AllowMethods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - OPTIONS
+        AllowHeaders:
+          - Content-Type
+          - Authorization
+        AllowOrigins:
+          - "*"
 
   FeatureFlagExecutionRole:
     Type: AWS::IAM::Role
@@ -85,11 +93,12 @@ Resources:
                 Action:
                   - sqs:SendMessage
                 Resource: !Ref ExistingAuditQueueArn
+
               - Effect: Allow
                 Action:
                   - secretsmanager:GetSecretValue
                 Resource: !Ref ExistingJWTSecretArn
-              
+
               - Effect: Allow
                 Action:
                   - sqs:ReceiveMessage
@@ -109,11 +118,12 @@ Resources:
         - !Ref PythonDependenciesLayer
       Events:
         ApiEvent:
-          Type: Api
+          Type: HttpApi
           Properties:
+            ApiId: !Ref FeatureFlagHTTPApi
             Path: /auth/signup
-            Method: post
-            RestApiId: !Ref FeatureFlagAPI
+            Method: POST
+            PayloadFormatVersion: "1.0"
 
   Login:
     Type: AWS::Serverless::Function
@@ -126,11 +136,12 @@ Resources:
         - !Ref PythonDependenciesLayer
       Events:
         ApiEvent:
-          Type: Api
+          Type: HttpApi
           Properties:
+            ApiId: !Ref FeatureFlagHTTPApi
             Path: /auth/login
-            Method: post
-            RestApiId: !Ref FeatureFlagAPI
+            Method: POST
+            PayloadFormatVersion: "1.0"
 
   CreateFeature:
     Type: AWS::Serverless::Function
@@ -143,12 +154,12 @@ Resources:
         - !Ref PythonDependenciesLayer
       Events:
         ApiEvent:
-          Type: Api
+          Type: HttpApi
           Properties:
+            ApiId: !Ref FeatureFlagHTTPApi
             Path: /features
-            Method: post
-            RestApiId: !Ref FeatureFlagAPI
-            
+            Method: POST
+            PayloadFormatVersion: "1.0"
 
   UpdateFeatureEnv:
     Type: AWS::Serverless::Function
@@ -161,28 +172,30 @@ Resources:
         - !Ref PythonDependenciesLayer
       Events:
         ApiEvent:
-          Type: Api
+          Type: HttpApi
           Properties:
+            ApiId: !Ref FeatureFlagHTTPApi
             Path: /features/{flag}/env/{env}
-            Method: put
-            RestApiId: !Ref FeatureFlagAPI
+            Method: PUT
+            PayloadFormatVersion: "1.0"
 
   DeleteFeatureEnv:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: DeleteFeatureEnv
       CodeUri: ../app/src
-      Handler:  handlers.features.delete_feature_env.main.delete_feature_env_handler
+      Handler: handlers.features.delete_feature_env.main.delete_feature_env_handler
       Role: !GetAtt FeatureFlagExecutionRole.Arn
       Layers:
         - !Ref PythonDependenciesLayer
       Events:
         ApiEvent:
-          Type: Api
+          Type: HttpApi
           Properties:
+            ApiId: !Ref FeatureFlagHTTPApi
             Path: /features/{flag}/env/{env}
-            Method: delete
-            RestApiId: !Ref FeatureFlagAPI
+            Method: DELETE
+            PayloadFormatVersion: "1.0"
 
   DeleteFeature:
     Type: AWS::Serverless::Function
@@ -195,11 +208,13 @@ Resources:
         - !Ref PythonDependenciesLayer
       Events:
         ApiEvent:
-          Type: Api
+          Type: HttpApi
           Properties:
+            ApiId: !Ref FeatureFlagHTTPApi
             Path: /features/{flag}
-            Method: delete
-            RestApiId: !Ref FeatureFlagAPI
+            Method: DELETE
+            PayloadFormatVersion: "1.0"
+
   GetFeature:
     Type: AWS::Serverless::Function
     Properties:
@@ -211,12 +226,12 @@ Resources:
         - !Ref PythonDependenciesLayer
       Events:
         ApiEvent:
-          Type: Api
+          Type: HttpApi
           Properties:
+            ApiId: !Ref FeatureFlagHTTPApi
             Path: /features/{flag}
-            Method: get
-            RestApiId: !Ref FeatureFlagAPI
-          
+            Method: GET
+            PayloadFormatVersion: "1.0"
 
   EvaluateFeature:
     Type: AWS::Serverless::Function
@@ -229,11 +244,12 @@ Resources:
         - !Ref PythonDependenciesLayer
       Events:
         ApiEvent:
-          Type: Api
+          Type: HttpApi
           Properties:
+            ApiId: !Ref FeatureFlagHTTPApi
             Path: /features/evaluate
-            Method: post
-            RestApiId: !Ref FeatureFlagAPI
+            Method: POST
+            PayloadFormatVersion: "1.0"
 
   GetAuditLogs:
     Type: AWS::Serverless::Function
@@ -246,12 +262,12 @@ Resources:
         - !Ref PythonDependenciesLayer
       Events:
         ApiEvent:
-          Type: Api
+          Type: HttpApi
           Properties:
+            ApiId: !Ref FeatureFlagHTTPApi
             Path: /features/{flag}/audit
-            Method: get
-            RestApiId: !Ref FeatureFlagAPI
-
+            Method: GET
+            PayloadFormatVersion: "1.0"
 
   AuditConsumer:
     Type: AWS::Serverless::Function
@@ -271,5 +287,5 @@ Resources:
 
 Outputs:
   ApiUrl:
-    Description: API Gateway base URL
-    Value: !Sub "https://${FeatureFlagAPI}.execute-api.${AWS::Region}.amazonaws.com/Dev"
+    Description: HTTP API base URL
+    Value: !Sub "https://${FeatureFlagHTTPApi}.execute-api.${AWS::Region}.amazonaws.com/Dev"
