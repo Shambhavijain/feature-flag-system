@@ -83,6 +83,9 @@ def map_feature_items(items: list[dict]) -> dict:
                 "rollout_end_at": item.get("rollout_end_at"),
                 "updated_at": item.get("updated_at"),
             }
+            
+    if feature["feature"] is None:
+        return None        
 
     return feature
 

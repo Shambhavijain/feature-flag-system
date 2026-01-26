@@ -67,13 +67,13 @@ class FeatureService:
         if not existing_items:
             raise FeatureNotFoundException(feature_name)
 
-        old =  map_feature_items(existing_items)
+        previous_audit =  map_feature_items(existing_items)
 
         publish_audit(
             feature=feature_name,
             action=AuditAction.DELETE_FEATURE,
             actor=actor,
-            old=old,
+            old=previous_audit,
             new=None,
         )
 
@@ -86,7 +86,11 @@ class FeatureService:
         if not items:
             raise FeatureNotFoundException(feature_name)
 
-        return map_feature_items(items)
+        feature = map_feature_items(items)
+        if not feature:
+            raise FeatureNotFoundException(feature_name)
+
+        return feature
 
     def evaluate(self, request_evaluate: EvaluateDTO) -> bool:
         feature_name = request_evaluate.feature.lower()
