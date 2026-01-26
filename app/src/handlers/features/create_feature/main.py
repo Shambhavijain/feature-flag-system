@@ -11,7 +11,7 @@ def create_feature_handler(event, context):
     user = get_current_user(event)
     require_admin(user)
 
-    body = json.loads(event.get("body", "{}"))
+    body = json.loads(event.get("body"))
     dto = CreateFeatureDTO(**body)
 
     service = get_feature_service()

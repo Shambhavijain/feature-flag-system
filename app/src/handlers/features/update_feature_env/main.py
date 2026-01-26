@@ -14,7 +14,7 @@ def update_feature_env_handler(event, context):
     flag = path["flag"]
     env = path["env"]
 
-    body = json.loads(event.get("body", "{}"))
+    body = json.loads(event.get("body"))
     request = UpdateFeatureEnvDTO(**body)
 
     service = get_feature_service()

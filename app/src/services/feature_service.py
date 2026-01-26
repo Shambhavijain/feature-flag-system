@@ -19,8 +19,7 @@ from error_handling.exceptions import(
 class FeatureService:
     def __init__(self, repo: FeatureRepository):
         self.repo = repo
-
-    
+ 
     def create_feature(self, request_feature: CreateFeatureDTO, actor: str):
         feature_name = request_feature.name.lower()
 
@@ -40,8 +39,7 @@ class FeatureService:
                 "environments":request_feature.environments,
             },
         )
-
-    
+  
     def remove_env(self, feature_name: str, environment: str, actor: str):
         feature_name = feature_name.lower()
         environment = environment.lower()
@@ -62,7 +60,6 @@ class FeatureService:
             new=None,
         )
 
-    
     def delete_feature(self, feature_name: str, actor: str):
         feature_name = feature_name.lower()
 
@@ -82,9 +79,6 @@ class FeatureService:
 
         self.repo.delete_feature(feature_name)
 
-   
-  
-
     def get_feature(self, feature_name: str):
         feature_name = feature_name.lower()
 
@@ -94,7 +88,6 @@ class FeatureService:
 
         return map_feature_items(items)
 
-   
     def evaluate(self, request_evaluate: EvaluateDTO) -> bool:
         feature_name = request_evaluate.feature.lower()
         environment = request_evaluate.environment.value.lower()
@@ -139,14 +132,10 @@ class FeatureService:
 
         return env_data["enabled"]
 
-
-
-   
     def get_audit_logs(self, feature_name: str):
         feature_items = self.repo.get_audit_logs(feature_name.lower())
         return map_audit_items(feature_items)
-
-    
+  
     def update_env(
         self,
         feature_name: str,

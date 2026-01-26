@@ -10,7 +10,7 @@ from utils.handler_decorator import lambda_handler_wrapper
 def evaluate_feature_handler(event, context):
     get_current_user(event)
 
-    body = json.loads(event.get("body", "{}"))
+    body = json.loads(event.get("body"))
     dto = EvaluateDTO(**body)
 
     service = get_feature_service()
