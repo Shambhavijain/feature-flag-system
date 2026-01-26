@@ -42,9 +42,6 @@ Resources:
       BuildProperties:
         PIP_DEPENDENCIES_FILE: requirements.txt
 
-  # ---------------------------
-  # HTTP API (replacing REST API)
-  # ---------------------------
   FeatureFlagHTTPApi:
     Type: AWS::Serverless::HttpApi
     Properties:
