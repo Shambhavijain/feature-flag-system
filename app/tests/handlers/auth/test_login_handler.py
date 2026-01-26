@@ -8,9 +8,20 @@ from dto.auth_dto import LoginRequestDTO
 
 class TestLoginHandler(unittest.TestCase):
 
-    @patch("src.handlers.auth.login_handler.main.get_auth_service")
+    def setUp(self):
+        self.get_service_patcher = patch(
+            "src.handlers.auth.login_handler.main.get_auth_service"
+        )
+        self.mock_get_service = self.get_service_patcher.start()
+
+        self.mock_service = MagicMock()
+        self.mock_get_service.return_value = self.mock_service
+
+    def tearDown(self):
+        self.get_service_patcher.stop()
+
     @patch("src.handlers.auth.login_handler.main.success_response")
-    def test_login_success(self, mock_success, mock_get_service):
+    def test_login_success(self, mock_success):
         event = {
             "body": json.dumps({
                 "email": "test@example.com",
@@ -18,9 +29,7 @@ class TestLoginHandler(unittest.TestCase):
             })
         }
 
-        mock_service = MagicMock()
-        mock_service.login.return_value = "jwt-token"
-        mock_get_service.return_value = mock_service
+        self.mock_service.login.return_value = "jwt-token"
 
         mock_success.return_value = {
             "statusCode": 200,
@@ -29,10 +38,10 @@ class TestLoginHandler(unittest.TestCase):
 
         response = handler(event, context={})
 
-        mock_get_service.assert_called_once()
-        mock_service.login.assert_called_once()
+        self.mock_get_service.assert_called_once()
+        self.mock_service.login.assert_called_once()
 
-        login_arg = mock_service.login.call_args[0][0]
+        login_arg = self.mock_service.login.call_args[0][0]
         self.assertIsInstance(login_arg, LoginRequestDTO)
 
         mock_success.assert_called_once_with("jwt-token", 200)
@@ -41,10 +50,11 @@ class TestLoginHandler(unittest.TestCase):
     def test_login_invalid_json(self):
         event = {"body": "{invalid-json"}
         response = handler(event, context={})
-        self.assertEqual(response["statusCode"], 400)
 
-    @patch("src.handlers.auth.login_handler.main.get_auth_service")
-    def test_login_service_exception(self, mock_get_service):
+        self.assertEqual(response["statusCode"], 400)
+        self.mock_service.login.assert_not_called()
+
+    def test_login_service_exception(self):
         event = {
             "body": json.dumps({
                 "email": "test@example.com",
@@ -52,9 +62,8 @@ class TestLoginHandler(unittest.TestCase):
             })
         }
 
-        mock_service = MagicMock()
-        mock_service.login.side_effect = Exception("boom")
-        mock_get_service.return_value = mock_service
+        self.mock_service.login.side_effect = Exception("boom")
 
         response = handler(event, context={})
+
         self.assertEqual(response["statusCode"], 500)

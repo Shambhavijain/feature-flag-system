@@ -8,17 +8,36 @@ from error_handling.exceptions import AppException
 
 class TestCreateFeatureHandler(unittest.TestCase):
 
-    @patch("src.handlers.features.create_feature.main.get_current_user")
-    @patch("src.handlers.features.create_feature.main.require_admin")
-    @patch("src.handlers.features.create_feature.main.get_feature_service")
+    def setUp(self):
+        # Patch common dependencies
+        self.get_user_patcher = patch(
+            "src.handlers.features.create_feature.main.get_current_user"
+        )
+        self.require_admin_patcher = patch(
+            "src.handlers.features.create_feature.main.require_admin"
+        )
+        self.get_service_patcher = patch(
+            "src.handlers.features.create_feature.main.get_feature_service"
+        )
+
+        self.mock_get_user = self.get_user_patcher.start()
+        self.mock_require_admin = self.require_admin_patcher.start()
+        self.mock_get_service = self.get_service_patcher.start()
+
+        # Common defaults
+        self.mock_get_user.return_value = {"role": "ADMIN"}
+        self.mock_require_admin.return_value = None
+
+        self.mock_service = MagicMock()
+        self.mock_get_service.return_value = self.mock_service
+
+    def tearDown(self):
+        self.get_user_patcher.stop()
+        self.require_admin_patcher.stop()
+        self.get_service_patcher.stop()
+
     @patch("src.handlers.features.create_feature.main.success_response")
-    def test_create_feature_success(
-        self,
-        mock_success,
-        mock_get_service,
-        mock_require_admin,
-        mock_get_user,
-    ):
+    def test_create_feature_success(self, mock_success):
         event = {
             "headers": {"Authorization": "Bearer token"},
             "body": json.dumps({
@@ -28,11 +47,6 @@ class TestCreateFeatureHandler(unittest.TestCase):
             })
         }
 
-        mock_get_user.return_value = {"role": "ADMIN"}
-
-        mock_service = MagicMock()
-        mock_get_service.return_value = mock_service
-
         mock_success.return_value = {
             "statusCode": 201,
             "body": json.dumps({"message": "Feature Created"})
@@ -40,18 +54,17 @@ class TestCreateFeatureHandler(unittest.TestCase):
 
         response = create_feature_handler(event, context={})
 
-        mock_get_user.assert_called_once_with(event)
-        mock_require_admin.assert_called_once_with({"role": "ADMIN"})
-        mock_service.create_feature.assert_called_once()
+        self.mock_get_user.assert_called_once_with(event)
+        self.mock_require_admin.assert_called_once_with({"role": "ADMIN"})
+        self.mock_service.create_feature.assert_called_once()
         mock_success.assert_called_once_with(
             {"message": "Feature Created"}, 201
         )
 
         self.assertEqual(response["statusCode"], 201)
 
-    @patch("src.handlers.features.create_feature.main.get_current_user")
-    def test_create_feature_missing_auth(self, mock_get_user):
-        mock_get_user.side_effect = AppException("Unauthorized", 401)
+    def test_create_feature_missing_auth(self):
+        self.mock_get_user.side_effect = AppException("Unauthorized", 401)
 
         event = {
             "body": json.dumps({
@@ -65,13 +78,9 @@ class TestCreateFeatureHandler(unittest.TestCase):
 
         self.assertEqual(response["statusCode"], 401)
 
-    @patch("src.handlers.features.create_feature.main.get_current_user")
-    @patch("src.handlers.features.create_feature.main.require_admin")
-    def test_create_feature_not_admin(
-        self, mock_require_admin, mock_get_user
-    ):
-        mock_get_user.return_value = {"role": "USER"}
-        mock_require_admin.side_effect = AppException(
+    def test_create_feature_not_admin(self):
+        self.mock_get_user.return_value = {"role": "USER"}
+        self.mock_require_admin.side_effect = AppException(
             "Admin access required", 403
         )
 
@@ -88,14 +97,7 @@ class TestCreateFeatureHandler(unittest.TestCase):
 
         self.assertEqual(response["statusCode"], 403)
 
-    @patch("src.handlers.features.create_feature.main.get_current_user")
-    @patch("src.handlers.features.create_feature.main.require_admin")
-    def test_create_feature_invalid_json(
-        self, mock_require_admin, mock_get_user
-    ):
-        mock_get_user.return_value = {"role": "ADMIN"}
-        mock_require_admin.return_value = None
-
+    def test_create_feature_invalid_json(self):
         event = {
             "headers": {"Authorization": "Bearer token"},
             "body": "{invalid-json"
@@ -105,15 +107,7 @@ class TestCreateFeatureHandler(unittest.TestCase):
 
         self.assertEqual(response["statusCode"], 400)
 
-
-    @patch("src.handlers.features.create_feature.main.get_current_user")
-    @patch("src.handlers.features.create_feature.main.require_admin")
-    def test_create_feature_missing_fields(
-        self, mock_require_admin, mock_get_user
-    ):
-        mock_get_user.return_value = {"role": "ADMIN"}
-        mock_require_admin.return_value = None
-
+    def test_create_feature_missing_fields(self):
         event = {
             "headers": {"Authorization": "Bearer token"},
             "body": json.dumps({
@@ -125,19 +119,8 @@ class TestCreateFeatureHandler(unittest.TestCase):
 
         self.assertEqual(response["statusCode"], 400)
 
-
-    @patch("src.handlers.features.create_feature.main.get_current_user")
-    @patch("src.handlers.features.create_feature.main.require_admin")
-    @patch("src.handlers.features.create_feature.main.get_feature_service")
-    def test_create_feature_service_exception(
-        self, mock_get_service, mock_require_admin, mock_get_user
-    ):
-        mock_get_user.return_value = {"role": "ADMIN"}
-        mock_require_admin.return_value = None
-
-        mock_service = MagicMock()
-        mock_service.create_feature.side_effect = Exception("boom")
-        mock_get_service.return_value = mock_service
+    def test_create_feature_service_exception(self):
+        self.mock_service.create_feature.side_effect = Exception("boom")
 
         event = {
             "headers": {"Authorization": "Bearer token"},

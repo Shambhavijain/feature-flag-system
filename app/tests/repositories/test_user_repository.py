@@ -23,9 +23,7 @@ class TestUserRepository(unittest.TestCase):
         
     def test_create_user_success(self):
         self.mock_table.put_item.return_value = {}
-
         self.repo.create_user(self.user)
-
         self.mock_table.put_item.assert_called_once()
 
     def test_create_user_conflict(self):

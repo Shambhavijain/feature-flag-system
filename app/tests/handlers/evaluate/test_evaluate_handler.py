@@ -3,7 +3,6 @@ import unittest
 from unittest.mock import patch, MagicMock
 
 from src.handlers.evaluate.main import evaluate_feature_handler
-from dto.feature_dto import EvaluateDTO
 from constants.enums import Environment
 from error_handling.exceptions import AppException
 
@@ -38,8 +37,18 @@ class TestEvaluateFeatureHandler(unittest.TestCase):
         response = evaluate_feature_handler(event, context={})
 
         mock_get_user.assert_called_once_with(event)
+
         mock_service.evaluate.assert_called_once()
-        mock_success.assert_called_once_with({"enabled": True}, 200)
+
+        args, kwargs = mock_service.evaluate.call_args
+
+        self.assertEqual(args[0].feature, "new-ui")
+        self.assertEqual(args[0].environment, Environment.DEV.value)
+
+        mock_success.assert_called_once_with(
+            {"enabled": True},
+            200
+        )
 
         self.assertEqual(response["statusCode"], 200)
 
@@ -68,6 +77,21 @@ class TestEvaluateFeatureHandler(unittest.TestCase):
         response = evaluate_feature_handler(event, context={})
 
         self.assertEqual(response["statusCode"], 401)
+
+    @patch("src.handlers.evaluate.main.get_current_user")
+    def test_missing_required_fields(self, mock_get_user):
+        mock_get_user.return_value = {"user_id": "1"}
+
+        event = {
+            "headers": {"Authorization": "Bearer token"},
+            "body": json.dumps({
+                "feature": "new-ui"
+            })
+        }
+
+        response = evaluate_feature_handler(event, context={})
+
+        self.assertEqual(response["statusCode"], 400)
 
     @patch("src.handlers.evaluate.main.get_current_user")
     @patch("src.handlers.evaluate.main.get_feature_service")
