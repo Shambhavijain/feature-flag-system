@@ -270,3 +270,15 @@ class TestFeatureService(unittest.TestCase):
 
         with self.assertRaises(EnvironmentNotFoundException):
             self.service.evaluate(req)
+
+    @patch("services.feature_service.map_feature_items")
+    def test_get_feature_mapper_returns_none(self, mock_mapper):
+        self.repo.get_feature_items.return_value = [{"SK": "META"}]
+        mock_mapper.return_value = None  
+
+        with self.assertRaises(FeatureNotFoundException):
+            self.service.get_feature("feature")
+
+        self.repo.get_feature_items.assert_called_once_with("feature")
+        mock_mapper.assert_called_once()
+            
