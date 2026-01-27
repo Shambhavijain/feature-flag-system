@@ -29,18 +29,7 @@ Globals:
         JWT_ALGORITHM: HS256
 
 Resources:
-  PythonDependenciesLayer:
-    Type: AWS::Serverless::LayerVersion
-    Properties:
-      LayerName: feature-flag-python-deps
-      ContentUri: ../layers/python
-      CompatibleRuntimes:
-        - python3.12
-      RetentionPolicy: Retain
-    Metadata:
-      BuildMethod: python3.12
-      BuildProperties:
-        PIP_DEPENDENCIES_FILE: requirements.txt
+
 
   FeatureFlagHTTPApi:
     Type: AWS::Serverless::HttpApi
@@ -111,8 +100,6 @@ Resources:
       CodeUri: ../app/src
       Handler: handlers.auth.signup_handler.main.handler
       Role: !GetAtt FeatureFlagExecutionRole.Arn
-      Layers:
-        - !Ref PythonDependenciesLayer
       Events:
         ApiEvent:
           Type: HttpApi
@@ -129,8 +116,6 @@ Resources:
       CodeUri: ../app/src
       Handler: handlers.auth.login_handler.main.handler
       Role: !GetAtt FeatureFlagExecutionRole.Arn
-      Layers:
-        - !Ref PythonDependenciesLayer
       Events:
         ApiEvent:
           Type: HttpApi
@@ -147,8 +132,6 @@ Resources:
       CodeUri: ../app/src
       Handler: handlers.features.create_feature.main.create_feature_handler
       Role: !GetAtt FeatureFlagExecutionRole.Arn
-      Layers:
-        - !Ref PythonDependenciesLayer
       Events:
         ApiEvent:
           Type: HttpApi
@@ -165,8 +148,6 @@ Resources:
       CodeUri: ../app/src
       Handler: handlers.features.update_feature_env.main.update_feature_env_handler
       Role: !GetAtt FeatureFlagExecutionRole.Arn
-      Layers:
-        - !Ref PythonDependenciesLayer
       Events:
         ApiEvent:
           Type: HttpApi
@@ -183,8 +164,6 @@ Resources:
       CodeUri: ../app/src
       Handler: handlers.features.delete_feature_env.main.delete_feature_env_handler
       Role: !GetAtt FeatureFlagExecutionRole.Arn
-      Layers:
-        - !Ref PythonDependenciesLayer
       Events:
         ApiEvent:
           Type: HttpApi
@@ -201,8 +180,6 @@ Resources:
       CodeUri: ../app/src
       Handler: handlers.features.delete_feature.main.delete_feature_handler
       Role: !GetAtt FeatureFlagExecutionRole.Arn
-      Layers:
-        - !Ref PythonDependenciesLayer
       Events:
         ApiEvent:
           Type: HttpApi
@@ -219,8 +196,6 @@ Resources:
       CodeUri: ../app/src
       Handler: handlers.features.get_feature.main.get_feature_handler
       Role: !GetAtt FeatureFlagExecutionRole.Arn
-      Layers:
-        - !Ref PythonDependenciesLayer
       Events:
         ApiEvent:
           Type: HttpApi
@@ -237,8 +212,6 @@ Resources:
       CodeUri: ../app/src
       Handler: handlers.evaluate.main.evaluate_feature_handler
       Role: !GetAtt FeatureFlagExecutionRole.Arn
-      Layers:
-        - !Ref PythonDependenciesLayer
       Events:
         ApiEvent:
           Type: HttpApi
@@ -255,8 +228,6 @@ Resources:
       CodeUri: ../app/src
       Handler: handlers.features.audit.get_audit.main.get_feature_audit_handler
       Role: !GetAtt FeatureFlagExecutionRole.Arn
-      Layers:
-        - !Ref PythonDependenciesLayer
       Events:
         ApiEvent:
           Type: HttpApi
@@ -273,8 +244,6 @@ Resources:
       CodeUri: ../app/src
       Handler: handlers.features.audit.consumer.main.handler
       Role: !GetAtt FeatureFlagExecutionRole.Arn
-      Layers:
-        - !Ref PythonDependenciesLayer
       Events:
         SQSEvent:
           Type: SQS
