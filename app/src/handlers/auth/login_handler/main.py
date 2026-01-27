@@ -5,10 +5,10 @@ from utils.password_validator import validate_password
 from error_handling.responses import success_response, error_response
 from error_handling.exceptions import AppException
 from dto.auth_dto import LoginRequestDTO
-from utils.handler_decorator import lambda_handler_wrapper
+from utils.handler_decorator import error_handler
 
 
-@lambda_handler_wrapper
+@error_handler
 def handler(event,context): 
     body = json.loads(event["body"])
     login_request = LoginRequestDTO(**body)

@@ -3,10 +3,10 @@ import json
 from dependency import get_current_user, get_feature_service
 from dto.feature_dto import EvaluateDTO
 from error_handling.responses import success_response
-from utils.handler_decorator import lambda_handler_wrapper
+from utils.handler_decorator import error_handler
 
 
-@lambda_handler_wrapper
+@error_handler
 def evaluate_feature_handler(event, context):
     get_current_user(event)
 

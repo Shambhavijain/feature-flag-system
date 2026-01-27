@@ -10,7 +10,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 
-def lambda_handler_wrapper(func):
+def error_handler(func):
     @wraps(func)
     def wrapper(event, context):
         try:

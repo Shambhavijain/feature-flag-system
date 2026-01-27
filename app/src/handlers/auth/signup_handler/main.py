@@ -4,10 +4,10 @@ from dto.auth_dto import SignuprequestDTO
 from dependency import get_auth_service
 from error_handling.exceptions import AppException
 from error_handling.responses import success_response,error_response
-from utils.handler_decorator import lambda_handler_wrapper
+from utils.handler_decorator import error_handler
 
 
-@lambda_handler_wrapper
+@error_handler
 def handler(event, context):
     
     body = json.loads(event["body"])
