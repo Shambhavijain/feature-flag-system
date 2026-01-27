@@ -9,7 +9,7 @@ It allows admin to create, manage and audit feature flags across multiple enviro
 
 - **Language**: Python 3.12
 - **Framework**: AWS Lambda (SAM)
-- **Database**: DynamoDB (Single Table Design)
+- **Database**: DynamoDB 
 - **Messaging**: SQS (Audit Events)
 - **Auth**: JWT
 - **Testing**: `unittest` + `pytest`
@@ -20,12 +20,10 @@ It allows admin to create, manage and audit feature flags across multiple enviro
 ##  Architecture Overview
 
 ### 🔹 Feature Flags
-- Each feature is stored under a single **partition key**
-- Each environment is a separate item
-- Supports:
-  - Enable / Disable
-  - Scheduled rollout (`rollout_end_at`)
-  - Auto-enable after rollout
+-   Enable/Disable features dynamically without redeployemnet.
+- Supports environment-based flags (deva, qa, staging , prod)
+- Allow Clients to evaluate flas at runtime.
+- Maintain audit logs
 
 ### 🔹 Audit Logs
 - Every change emits an audit event to **SQS**
@@ -33,6 +31,23 @@ It allows admin to create, manage and audit feature flags across multiple enviro
 - Ensures **at-least-once delivery** (idempotent by design)
 
 ---
+
+## System Architecture
+
+- The Feature Flag System follows a serverless, event-driven architecture using AWS services.
+
+Client
+   ↓
+API Gateway (HTTP API)
+   ↓
+Lambda (Feature APIs)
+   ├── DynamoDB (Feature Store)
+   └── SQS (Audit Queue)
+          ↓
+Lambda (Audit Consumer)
+          ↓
+DynamoDB (Audit Logs)
+
 
 ##  DynamoDB Single Table Design
 
@@ -57,8 +72,4 @@ It allows admin to create, manage and audit feature flags across multiple enviro
 
 ##  Installation
 
-Create virtual environment:
 
-```bash
-python -m venv venv
-source venv/bin/activate
