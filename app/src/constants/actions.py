@@ -1,4 +1,5 @@
-class AuditAction:
+from enum import Enum
+class AuditAction(str,Enum):
     CREATE_FEATURE = "CREATE_FEATURE"
     UPDATE_ENV = "UPDATE_ENV"
     DELETE_ENV = "DELETE_ENV"

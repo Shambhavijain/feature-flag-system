@@ -21,6 +21,8 @@ Globals:
     Timeout: 30
     Architectures:
       - x86_64
+    Layers:                       
+      - !Ref CommonDependenciesLayer
     Environment:
       Variables:
         DDB_TABLE_NAME: !Ref ExistingDdbTableName
@@ -47,6 +49,17 @@ Resources:
           - Authorization
         AllowOrigins:
           - "*"
+
+  CommonDependenciesLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: feature-flag-common-deps
+      Description: Shared Python dependencies for Feature Flag system
+      ContentUri: layer/
+      CompatibleRuntimes:
+        - python3.12
+      RetentionPolicy: Retain
+        
 
   FeatureFlagExecutionRole:
     Type: AWS::IAM::Role
