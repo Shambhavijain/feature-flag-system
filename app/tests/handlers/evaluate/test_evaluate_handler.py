@@ -3,7 +3,7 @@ import unittest
 from unittest.mock import patch, MagicMock
 
 from src.handlers.evaluate.main import evaluate_feature_handler
-from constants.enums import Environment
+from enums.enums import Environment
 from error_handling.exceptions import AppException
 
 

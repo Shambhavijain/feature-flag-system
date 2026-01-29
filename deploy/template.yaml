@@ -22,7 +22,7 @@ Globals:
     Architectures:
       - x86_64
     Layers:                       
-      - !Ref CommonDependenciesLayer
+      - !Ref PythonDependenciesLayer
     Environment:
       Variables:
         DDB_TABLE_NAME: !Ref ExistingDdbTableName
@@ -31,8 +31,6 @@ Globals:
         JWT_ALGORITHM: HS256
 
 Resources:
-
-
   FeatureFlagHTTPApi:
     Type: AWS::Serverless::HttpApi
     Properties:
@@ -50,7 +48,7 @@ Resources:
         AllowOrigins:
           - "*"
 
-  CommonDependenciesLayer:
+  PythonDependenciesLayer:
     Type: AWS::Serverless::LayerVersion
     Properties:
       LayerName: feature-flag-common-deps

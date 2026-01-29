@@ -3,7 +3,7 @@ from datetime import datetime, timezone, timedelta
 from repository.user_repository import UserRepository
 from dto.auth_dto import SignuprequestDTO, LoginRequestDTO
 from utils.utils import hash_password, verify_password, generate_jwt
-from constants.enums import Role
+from enums.enums import Role
 from error_handling.exceptions import ConflictException, UnauthorizedException
 from models.user_model import UserModel
 

@@ -12,7 +12,6 @@ It allows admin to create, manage and audit feature flags across multiple enviro
 - **Database**: DynamoDB 
 - **Messaging**: SQS (Audit Events)
 - **Auth**: JWT
-- **Testing**: `unittest` + `pytest`
 - **Infrastructure**: AWS SAM
 
 ---
@@ -21,8 +20,8 @@ It allows admin to create, manage and audit feature flags across multiple enviro
 
 ### 🔹 Feature Flags
 -   Enable/Disable features dynamically without redeployemnet.
-- Supports environment-based flags (deva, qa, staging , prod)
-- Allow Clients to evaluate flas at runtime.
+- Supports environment-based flags (dev, qa, prod)
+- Allow Clients to evaluate flags at runtime.
 - Maintain audit logs
 
 ### 🔹 Audit Logs
@@ -69,7 +68,3 @@ DynamoDB (Audit Logs)
 - Admin-only endpoints enforced at handler level
 
 ---
-
-##  Installation
-
-

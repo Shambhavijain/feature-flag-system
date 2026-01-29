@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import Optional
-from constants.enums import Environment
+from enums.enums import Environment
 
 
 class CreateFeatureDTO(BaseModel):

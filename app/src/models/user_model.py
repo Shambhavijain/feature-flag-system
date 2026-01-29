@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from constants.enums import Role
+from enums.enums import Role
 
 
 @dataclass

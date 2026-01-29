@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from typing import Optional
-from constants.enums import Environment
+from enums.enums import Environment
 
 
 @dataclass

@@ -8,7 +8,7 @@ from error_handling.exceptions import (
     FeatureNotFoundException,
     EnvironmentNotFoundException,
 )
-from constants.enums import Environment
+from enums.enums import Environment
 
 class TestFeatureService(unittest.TestCase):
 

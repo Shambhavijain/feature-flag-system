@@ -1,7 +1,0 @@
-from enum import Enum
-class AuditAction(str,Enum):
-    CREATE_FEATURE = "CREATE_FEATURE"
-    UPDATE_ENV = "UPDATE_ENV"
-    DELETE_ENV = "DELETE_ENV"
-    DELETE_FEATURE = "DELETE_FEATURE"
-    AUTO_ROLLOUT = "AUTO_ROLLOUT"

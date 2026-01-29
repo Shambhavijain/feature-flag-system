@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
 from repository.feature_repository import FeatureRepository
-from constants.actions import AuditAction
+from enums.actions import AuditAction
 from utils.audit import publish_audit
 from utils.utils import map_env_for_audit, map_feature_items, map_audit_items
 from dto.feature_dto import (

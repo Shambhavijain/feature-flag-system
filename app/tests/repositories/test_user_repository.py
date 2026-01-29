@@ -4,7 +4,7 @@ from botocore.exceptions import ClientError
 
 from repository.user_repository import UserRepository
 from models.user_model import UserModel
-from constants.enums import Role
+from enums.enums import Role
 from error_handling.exceptions import ConflictException
 
 class TestUserRepository(unittest.TestCase):

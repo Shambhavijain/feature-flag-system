@@ -5,7 +5,7 @@ from services.auth_service import AuthService
 from dto.auth_dto import SignuprequestDTO, LoginRequestDTO
 from error_handling.exceptions import ConflictException, UnauthorizedException
 from models.user_model import UserModel
-from constants.enums import Role
+from enums.enums import Role
 
 
 class TestAuthService(unittest.TestCase):
