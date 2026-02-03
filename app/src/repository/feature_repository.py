@@ -156,3 +156,12 @@ class FeatureRepository:
             },
         )
         return response.get("Items", [])
+    def list_features(self):
+        response = self.table.scan(
+            FilterExpression="SK = :meta",
+            ExpressionAttributeValues={
+                ":meta": "META"
+            }
+        )
+        return response.get("Items", [])
+    

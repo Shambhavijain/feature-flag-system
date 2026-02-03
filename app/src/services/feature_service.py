@@ -8,6 +8,7 @@ from dto.feature_dto import (
     CreateFeatureDTO,
     UpdateFeatureEnvDTO,
     EvaluateDTO,
+    FeatureListItemDTO
 )
 from error_handling.exceptions import(
     EnvironmentNotFoundException,
@@ -174,3 +175,25 @@ class FeatureService:
             old=previous_audit,
             new=current_audit,
         )
+
+    def list_features(self):
+        items = self.repo.list_features()
+        results = []
+
+        for item in items:
+            pk = item.get("PK")
+
+       
+            if not pk or not pk.startswith("FEATURE#"):
+                continue
+
+            results.append(
+                FeatureListItemDTO(
+                    name=pk.replace("FEATURE#", ""),
+                    description=item.get("description"),
+                    created_at=item.get("created_at"),
+                )
+            )
+
+        return results
+

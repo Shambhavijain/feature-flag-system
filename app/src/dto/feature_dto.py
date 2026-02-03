@@ -16,3 +16,8 @@ class EvaluateDTO(BaseModel):
     feature: str
     environment: Environment
     context: dict | None = None
+
+class FeatureListItemDTO(BaseModel):
+    name: str
+    description: Optional[str]
+    created_at: Optional[str] = None

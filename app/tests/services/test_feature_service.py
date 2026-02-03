@@ -113,17 +113,6 @@ class TestFeatureService(unittest.TestCase):
         with self.assertRaises(FeatureNotFoundException):
             self.service.evaluate(req)
 
-    def test_evaluate_feature_not_found(self):
-        self.repo.get_feature_items.return_value = []
-
-        req = EvaluateDTO(
-            feature="feature",
-            environment=Environment.DEV,
-            context={}
-        )
-
-        with self.assertRaises(FeatureNotFoundException):
-            self.service.evaluate(req)
 
     def test_evaluate_rollout_not_expired(self):
         future_time = (datetime.now(timezone.utc) + timedelta(minutes=5)).isoformat()
@@ -281,4 +270,44 @@ class TestFeatureService(unittest.TestCase):
 
         self.repo.get_feature_items.assert_called_once_with("feature")
         mock_mapper.assert_called_once()
+
+    @patch("services.feature_service.map_feature_items")
+    def test_list_features_success(self, mock_mapper):
+        self.repo.list_features.return_value = [
+            {"PK": "FEATURE#f1", "SK": "META"},
+            {"PK": "FEATURE#f2", "SK": "META"},
+        ]
+
+        mock_mapper.side_effect = [
+            {"name": "f1"},
+            {"name": "f2"},
+        ]
+
+        result = self.service.list_features()
+
+        self.repo.list_features.assert_called_once()
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0].name, "f1")
+        self.assertEqual(result[1].name, "f2")
+
+    
+    def test_list_features_empty(self):
+        self.repo.list_features.return_value = []
+
+        result = self.service.list_features()
+
+        self.assertEqual(result, [])
+    
+    @patch("services.feature_service.map_feature_items")
+    def test_list_features_skips_invalid_items(self, mock_mapper):
+        self.repo.list_features.return_value = [
+            {"SK": "ENV#dev"},
+            {"SK": "AUDIT#123"},
+        ]
+
+        result = self.service.list_features()
+
+        self.assertEqual(result, [])
+        mock_mapper.assert_not_called()
+
             

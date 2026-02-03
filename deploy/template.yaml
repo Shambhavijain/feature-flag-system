@@ -248,6 +248,23 @@ Resources:
             Method: GET
             PayloadFormatVersion: "1.0"
 
+  ListFeatures:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: ListFeatures
+      CodeUri: ../app/src
+      Handler: handlers.features.list_features.main.list_features_handler
+      Role: !GetAtt FeatureFlagExecutionRole.Arn
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref FeatureFlagHTTPApi
+            Path: /features
+            Method: GET
+            PayloadFormatVersion: "1.0"
+          
+
   AuditConsumer:
     Type: AWS::Serverless::Function
     Properties:

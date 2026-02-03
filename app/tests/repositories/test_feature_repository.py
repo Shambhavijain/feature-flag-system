@@ -166,4 +166,35 @@ class TestFeatureRepository(unittest.TestCase):
         logs = self.repo.get_audit_logs("feature")
 
         self.assertEqual(len(logs), 2)
+    def test_list_features_success(self):
+        self.mock_table.scan.return_value = {
+            "Items": [
+                {
+                    "PK": "FEATURE#f1",
+                    "SK": "META",
+                    "description": "desc1",
+                    "created_at": "2026-01-01T00:00:00Z"
+                },
+                {
+                    "PK": "FEATURE#f2",
+                    "SK": "META",
+                    "description": "desc2",
+                    "created_at": "2026-01-02T00:00:00Z"
+                }
+            ]
+        }
+
+        items = self.repo.list_features()
+
+        self.assertEqual(len(items), 2)
+        self.assertEqual(items[0]["SK"], "META")
+        self.mock_table.scan.assert_called_once()
+    
+    def test_list_features_empty(self):
+        self.mock_table.scan.return_value = {}
+
+        items = self.repo.list_features()
+
+        self.assertEqual(items, [])
+        self.mock_table.scan.assert_called_once()
 
