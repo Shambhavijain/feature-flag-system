@@ -1,5 +1,5 @@
 import boto3
-from infra.env import get_env
+from infra.config import get_env
 
 from infra.sqs.client import get_sqs_client
 

@@ -53,12 +53,11 @@ Resources:
     Properties:
       LayerName: feature-flag-common-deps
       Description: Shared Python dependencies for Feature Flag system
-      ContentUri: layer/
+      ContentUri: ../layer/
       CompatibleRuntimes:
         - python3.12
       RetentionPolicy: Retain
         
-
   FeatureFlagExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -84,6 +83,7 @@ Resources:
                   - dynamodb:UpdateItem
                   - dynamodb:DeleteItem
                   - dynamodb:Query
+                  - dynamodb:Scan
                 Resource: !Ref ExistingDdbTableArn
 
               - Effect: Allow

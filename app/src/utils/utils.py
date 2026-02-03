@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 from typing import Dict, Any
 from jose import jwt, JWTError, ExpiredSignatureError
 
-from infra.env import get_env
+from infra.config import get_env
 from passlib.context import CryptContext
 
 
