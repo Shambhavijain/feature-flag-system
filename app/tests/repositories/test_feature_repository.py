@@ -15,6 +15,8 @@ class TestFeatureRepository(unittest.TestCase):
 
         self.repo = FeatureRepository(self.mock_table)
 
+    
+
     def test_create_feature_success(self):
         self.mock_table.meta.client.transact_write_items.return_value = {}
 
@@ -28,46 +30,112 @@ class TestFeatureRepository(unittest.TestCase):
 
     def test_create_feature_conflict(self):
         self.mock_table.meta.client.transact_write_items.side_effect = ClientError(
-            error_response={
-                "Error": {"Code": "TransactionCanceledException"}
-            },
-            operation_name="TransactWriteItems"
+            error_response={"Error": {"Code": "TransactionCanceledException"}},
+            operation_name="TransactWriteItems",
         )
 
         with self.assertRaises(ConflictException):
             self.repo.create_feature(
                 feature_name="NewFeature",
                 description="test",
-                environments={"dev": True}
+                environments={"dev": True},
             )
 
     def test_create_feature_unexpected_client_error(self):
         self.mock_table.meta.client.transact_write_items.side_effect = ClientError(
-            error_response={
-                "Error": {"Code": "InternalServerError"}
-            },
-            operation_name="TransactWriteItems"
+            error_response={"Error": {"Code": "InternalServerError"}},
+            operation_name="TransactWriteItems",
         )
 
         with self.assertRaises(ClientError):
             self.repo.create_feature(
                 feature_name="NewFeature",
                 description="test",
-                environments={"dev": True}
-            )        
+                environments={"dev": True},
+            )
+
+    def test_create_feature_multiple_environments(self):
+        self.mock_table.meta.client.transact_write_items.return_value = {}
+
+        self.repo.create_feature(
+            feature_name="NewFeature",
+            description="test",
+            environments={"dev": True, "prod": False},
+        )
+
+        args = self.mock_table.meta.client.transact_write_items.call_args[1]
+        transact_items = args["TransactItems"]
+
+       
+        self.assertEqual(len(transact_items), 3)
+
+    
+
+    def test_get_feature_details_found(self):
+        self.mock_table.get_item.return_value = {
+            "Item": {
+                "PK": "FEATURES",
+                "SK": "FEATURE#feature",
+                "description": "desc",
+            }
+        }
+
+        item = self.repo.get_feature_details("feature")
+
+        self.assertIsNotNone(item)
+        self.assertEqual(item["SK"], "FEATURE#feature")
+        self.mock_table.get_item.assert_called_once()
+
+    def test_get_feature_details_not_found(self):
+        self.mock_table.get_item.return_value = {}
+
+        item = self.repo.get_feature_details("missing")
+
+        self.assertIsNone(item)
+        self.mock_table.get_item.assert_called_once()
+
+   
+
+    def test_get_feature_envs_success(self):
+        self.mock_table.query.return_value = {
+            "Items": [
+                {"SK": "ENV#dev", "enabled": True},
+                {"SK": "ENV#prod", "enabled": False},
+            ]
+        }
+
+        envs = self.repo.get_feature_envs("feature")
+
+        self.assertEqual(len(envs), 2)
+        self.mock_table.query.assert_called_once()
+
+    def test_get_feature_envs_empty(self):
+        self.mock_table.query.return_value = {}
+
+        envs = self.repo.get_feature_envs("feature")
+
+        self.assertEqual(envs, [])
+        self.mock_table.query.assert_called_once()
+
+    
 
     def test_get_env_found(self):
         self.mock_table.get_item.return_value = {
-            "Item": {
-                "environment": "dev",
-                "enabled": True
-            }
+            "Item": {"environment": "dev", "enabled": True}
         }
 
         env = self.repo.get_env("feature", "dev")
 
         self.assertIsNotNone(env)
         self.assertTrue(env["enabled"])
+
+    def test_get_env_not_found(self):
+        self.mock_table.get_item.return_value = {}
+
+        env = self.repo.get_env("feature", "dev")
+
+        self.assertIsNone(env)
+        self.mock_table.get_item.assert_called_once()
 
     def test_put_env_success(self):
         self.mock_table.update_item.return_value = {}
@@ -76,17 +144,15 @@ class TestFeatureRepository(unittest.TestCase):
             feature_name="feature",
             env="dev",
             enabled=True,
-            rollout_end_at=None
+            rollout_end_at=None,
         )
 
         self.mock_table.update_item.assert_called_once()
-    
+
     def test_put_env_not_found(self):
         self.mock_table.update_item.side_effect = ClientError(
-            error_response={
-                "Error": {"Code": "ConditionalCheckFailedException"}
-            },
-            operation_name="UpdateItem"
+            error_response={"Error": {"Code": "ConditionalCheckFailedException"}},
+            operation_name="UpdateItem",
         )
 
         with self.assertRaises(EnvironmentNotFoundException):
@@ -94,15 +160,13 @@ class TestFeatureRepository(unittest.TestCase):
                 feature_name="feature",
                 env="dev",
                 enabled=True,
-                rollout_end_at=None
+                rollout_end_at=None,
             )
 
     def test_put_env_unexpected_client_error(self):
         self.mock_table.update_item.side_effect = ClientError(
-            error_response={
-                "Error": {"Code": "ProvisionedThroughputExceededException"}
-            },
-            operation_name="UpdateItem"
+            error_response={"Error": {"Code": "ProvisionedThroughputExceededException"}},
+            operation_name="UpdateItem",
         )
 
         with self.assertRaises(ClientError):
@@ -110,91 +174,92 @@ class TestFeatureRepository(unittest.TestCase):
                 feature_name="feature",
                 env="dev",
                 enabled=True,
-                rollout_end_at=None
+                rollout_end_at=None,
             )
-        
 
     def test_delete_env_not_found(self):
         self.mock_table.delete_item.side_effect = ClientError(
-            error_response={
-                "Error": {"Code": "ConditionalCheckFailedException"}
-            },
-            operation_name="DeleteItem"
+            error_response={"Error": {"Code": "ConditionalCheckFailedException"}},
+            operation_name="DeleteItem",
         )
 
         with self.assertRaises(EnvironmentNotFoundException):
             self.repo.delete_env("feature", "prod")
+
     def test_delete_env_unexpected_client_error(self):
         self.mock_table.delete_item.side_effect = ClientError(
-            error_response={
-                "Error": {"Code": "InternalServerError"}
-            },
-            operation_name="DeleteItem"
+            error_response={"Error": {"Code": "InternalServerError"}},
+            operation_name="DeleteItem",
         )
 
         with self.assertRaises(ClientError):
             self.repo.delete_env("feature", "dev")
-        
-    def test_get_feature_items(self):
-        self.mock_table.query.return_value = {
-            "Items": [{"SK": "META"}, {"SK": "ENV#dev"}]
-        }
 
-        items = self.repo.get_feature_items("feature")
+   
 
-        self.assertEqual(len(items), 2)
-    def test_delete_feature_skips_audit_items(self):
+    def test_delete_feature_with_envs(self):
         self.mock_table.query.return_value = {
             "Items": [
-                {"PK": "FEATURE#f1", "SK": "META"},
-                {"PK": "FEATURE#f1", "SK": "ENV#dev"},
-                {"PK": "FEATURE#f1", "SK": "AUDIT#123"},
+                {"PK": "ENVIRONMENT#f1", "SK": "ENV#dev"},
+                {"PK": "ENVIRONMENT#f1", "SK": "ENV#prod"},
             ]
         }
 
-        mock_batch = MagicMock()
-        self.mock_table.batch_writer.return_value.__enter__.return_value = mock_batch
-
         self.repo.delete_feature("f1")
 
-        self.assertEqual(mock_batch.delete_item.call_count, 2)
+        args = self.mock_table.meta.client.transact_write_items.call_args[1]
+        transact_items = args["TransactItems"]
+
+      
+        self.assertEqual(len(transact_items), 3)
+
+    def test_delete_feature_only_feature_exists(self):
+        self.mock_table.query.return_value = {"Items": []}
+
+        self.repo.delete_feature("feature")
+
+        args = self.mock_table.meta.client.transact_write_items.call_args[1]
+        transact_items = args["TransactItems"]
+
+        self.assertEqual(len(transact_items), 1)
+
+   
+
     def test_get_audit_logs(self):
         self.mock_table.query.return_value = {
-            "Items": [{"SK": "AUDIT#1"}, {"SK": "AUDIT#2"}]
+            "Items": [{"SK": "LOGS#1"}, {"SK": "LOGS#2"}]
         }
 
         logs = self.repo.get_audit_logs("feature")
 
         self.assertEqual(len(logs), 2)
+        self.mock_table.query.assert_called_once()
+
+    def test_get_audit_logs_empty(self):
+        self.mock_table.query.return_value = {"Items": []}
+
+        logs = self.repo.get_audit_logs("feature")
+
+        self.assertEqual(logs, [])
+        self.mock_table.query.assert_called_once()
+
     def test_list_features_success(self):
-        self.mock_table.scan.return_value = {
+        self.mock_table.query.return_value = {
             "Items": [
-                {
-                    "PK": "FEATURE#f1",
-                    "SK": "META",
-                    "description": "desc1",
-                    "created_at": "2026-01-01T00:00:00Z"
-                },
-                {
-                    "PK": "FEATURE#f2",
-                    "SK": "META",
-                    "description": "desc2",
-                    "created_at": "2026-01-02T00:00:00Z"
-                }
+                {"SK": "FEATURE#f1"},
+                {"SK": "FEATURE#f2"},
             ]
         }
 
         items = self.repo.list_features()
 
         self.assertEqual(len(items), 2)
-        self.assertEqual(items[0]["SK"], "META")
-        self.mock_table.scan.assert_called_once()
-    
+        self.mock_table.query.assert_called_once()
+
     def test_list_features_empty(self):
-        self.mock_table.scan.return_value = {}
+        self.mock_table.query.return_value = {}
 
         items = self.repo.list_features()
 
         self.assertEqual(items, [])
-        self.mock_table.scan.assert_called_once()
-
+        self.mock_table.query.assert_called_once()

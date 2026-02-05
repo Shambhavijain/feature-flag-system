@@ -16,7 +16,6 @@ class TestGetFeatureAuditHandler(unittest.TestCase):
             "pathParameters": {"flag": "test-flag"},
         }
 
-        # Patch get_feature_service once per test
         self.get_service_patcher = patch(
             "src.handlers.features.audit.get_audit.main.get_feature_service"
         )
@@ -90,7 +89,7 @@ class TestGetFeatureAuditHandler(unittest.TestCase):
 
         response = get_feature_audit_handler(event, context={})
 
-        self.assertEqual(response["statusCode"], 500)
+        self.assertEqual(response["statusCode"], 401)
         self.mock_service.get_audit_logs.assert_not_called()
 
     @patch("src.handlers.features.audit.get_audit.main.get_current_user")

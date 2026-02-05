@@ -43,22 +43,28 @@ class TestFeatureService(unittest.TestCase):
 
     @patch("services.feature_service.map_feature_items")
     def test_get_feature_success(self, mock_mapper):
-        self.repo.get_feature_items.return_value = [
-            {"SK": "META", "name": "feature"}
-        ]
+        self.repo.get_feature_details.return_value = {
+            "SK": "FEATURE#feature"
+        }
+        self.repo.get_feature_envs.return_value = []
+
         mock_mapper.return_value = {"name": "feature"}
 
         result = self.service.get_feature("feature")
 
-        self.repo.get_feature_items.assert_called_once_with("feature")
+        self.repo.get_feature_details.assert_called_once_with("feature")
+        self.repo.get_feature_envs.assert_called_once_with("feature")
         mock_mapper.assert_called_once()
         self.assertEqual(result, {"name": "feature"})
 
     def test_get_feature_not_found(self):
-        self.repo.get_feature_items.return_value = []
+        self.repo.get_feature_details.return_value = None
 
         with self.assertRaises(FeatureNotFoundException):
             self.service.get_feature("feature")
+
+        self.repo.get_feature_details.assert_called_once_with("feature")
+
 
     
     @patch("services.feature_service.publish_audit")
@@ -83,7 +89,9 @@ class TestFeatureService(unittest.TestCase):
     def test_evaluate_auto_rollout(self, mock_audit):
         rollout_time = (datetime.now(timezone.utc) - timedelta(minutes=1)).isoformat()
 
-        self.repo.get_feature_items.return_value = [{"SK": "META"}]
+        self.repo.get_feature_details.return_value = {
+            "SK": "FEATURE#feature"
+        }
         self.repo.get_env.return_value = {
             "enabled": False,
             "rollout_end_at": rollout_time,
@@ -100,9 +108,10 @@ class TestFeatureService(unittest.TestCase):
         self.assertTrue(result)
         self.repo.put_env.assert_called_once()
         mock_audit.assert_called_once()
+
      
     def test_evaluate_feature_not_found(self):
-        self.repo.get_feature_items.return_value = []
+        self.repo.get_feature_details.return_value = None
 
         req = EvaluateDTO(
             feature="feature",
@@ -112,6 +121,7 @@ class TestFeatureService(unittest.TestCase):
 
         with self.assertRaises(FeatureNotFoundException):
             self.service.evaluate(req)
+
 
 
     def test_evaluate_rollout_not_expired(self):
@@ -198,7 +208,9 @@ class TestFeatureService(unittest.TestCase):
         self.repo.put_env.assert_called_once()
         mock_audit.assert_called_once()
     def test_evaluate_env_not_found(self):
-        self.repo.get_feature_items.return_value = [{"SK": "META"}]
+        self.repo.get_feature_details.return_value = {
+            "SK": "FEATURE#feature"
+        }
         self.repo.get_env.return_value = None
 
         req = EvaluateDTO(
@@ -209,21 +221,26 @@ class TestFeatureService(unittest.TestCase):
 
         with self.assertRaises(EnvironmentNotFoundException):
             self.service.evaluate(req)
+
      
     @patch("services.feature_service.publish_audit")
     @patch("services.feature_service.map_feature_items")
     def test_delete_feature_success(self, mock_mapper, mock_audit):
-        self.repo.get_feature_items.return_value = [{"SK": "META"}]
+        self.repo.get_feature_details.return_value = {
+            "SK": "FEATURE#feature"
+        }
+        self.repo.get_feature_envs.return_value = []
+
         mock_mapper.return_value = {"feature": "feature"}
 
         self.service.delete_feature("feature", actor="admin")
 
         self.repo.delete_feature.assert_called_once_with("feature")
         mock_audit.assert_called_once()
- 
+
 
     def test_delete_feature_not_found(self):
-        self.repo.get_feature_items.return_value = []
+        self.repo.get_feature_details.return_value = None
 
         with self.assertRaises(FeatureNotFoundException):
             self.service.delete_feature("feature", actor="admin")
@@ -261,26 +278,20 @@ class TestFeatureService(unittest.TestCase):
             self.service.evaluate(req)
 
     @patch("services.feature_service.map_feature_items")
-    def test_get_feature_mapper_returns_none(self, mock_mapper):
-        self.repo.get_feature_items.return_value = [{"SK": "META"}]
-        mock_mapper.return_value = None  
-
-        with self.assertRaises(FeatureNotFoundException):
-            self.service.get_feature("feature")
-
-        self.repo.get_feature_items.assert_called_once_with("feature")
-        mock_mapper.assert_called_once()
-
-    @patch("services.feature_service.map_feature_items")
     def test_list_features_success(self, mock_mapper):
         self.repo.list_features.return_value = [
-            {"PK": "FEATURE#f1", "SK": "META"},
-            {"PK": "FEATURE#f2", "SK": "META"},
-        ]
-
-        mock_mapper.side_effect = [
-            {"name": "f1"},
-            {"name": "f2"},
+            {
+                "PK": "FEATURES",
+                "SK": "FEATURE#f1",
+                "description": "desc1",
+                "created_at": "t1",
+            },
+            {
+                "PK": "FEATURES",
+                "SK": "FEATURE#f2",
+                "description": "desc2",
+                "created_at": "t2",
+            },
         ]
 
         result = self.service.list_features()
@@ -289,6 +300,7 @@ class TestFeatureService(unittest.TestCase):
         self.assertEqual(len(result), 2)
         self.assertEqual(result[0].name, "f1")
         self.assertEqual(result[1].name, "f2")
+
 
     
     def test_list_features_empty(self):

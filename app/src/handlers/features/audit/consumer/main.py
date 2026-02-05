@@ -21,13 +21,13 @@ def handler(event, context):
         )
 
         table.put_item(
-            Item={
-                "PK": f"FEATURE#{message['feature'].lower()}",
-                "SK": f"AUDIT#{message['timestamp']}",
-                "action": message["action"],
-                "actor": message["actor"],
-                "old_value": message.get("old"),
-                "new_value": message.get("new"),
-                "created_at": message["timestamp"],
-            }
-        )
+        Item={
+            "PK": f"AUDIT#{message['feature'].lower()}",
+            "SK": f"LOGS#{message['timestamp']}",
+            "action": message["action"],
+            "actor": message["actor"],
+            "old_value": message.get("old"),
+            "new_value": message.get("new"),
+        }
+    )
+

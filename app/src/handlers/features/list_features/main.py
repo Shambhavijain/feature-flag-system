@@ -9,7 +9,6 @@ from utils.handler_decorator import error_handler
 @error_handler
 def list_features_handler(event, context):
     user = get_current_user(event)
-    require_admin(user)
 
     service = get_feature_service()
     features = service.list_features()

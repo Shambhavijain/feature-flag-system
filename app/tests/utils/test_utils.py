@@ -8,9 +8,12 @@ from src.utils.utils import (
     JWT_ALGORITHM,
     hash_password,
     verify_password,
+    map_env_for_audit,
+    map_audit_items,
+
     
 )
-
+from error_handling.exceptions import UnauthorizedException
 
 def test_hash_and_verify_password_success():
     password = "Strong123!"
@@ -42,9 +45,60 @@ def test_verify_jwt_expired():
         algorithm=JWT_ALGORITHM,
     )
 
-    with pytest.raises(ValueError, match="Token expired"):
+    with pytest.raises(UnauthorizedException, match="Token expired"):
         verify_jwt(expired_token)
 
 def test_verify_jwt_invalid():
-    with pytest.raises(ValueError, match="Invalid token"):
+    with pytest.raises(UnauthorizedException, match="Invalid token"):
         verify_jwt("invalid.token.value")
+
+def test_map_env_for_audit_success():
+    item = {
+        "environment": "dev",
+        "enabled": True,
+        "rollout_end_at": None,
+        "updated_at": "2026-01-01T00:00:00Z"
+    }
+
+    result = map_env_for_audit(item)
+
+    assert result == {
+        "environment": "dev",
+        "enabled": True,
+        "rollout_end_at": None,
+        "updated_at": "2026-01-01T00:00:00Z"
+    }
+
+
+def test_map_env_for_audit_none():
+    assert map_env_for_audit(None) is None
+from src.utils.utils import map_audit_items
+
+def test_map_audit_items_success():
+    items = [
+        {
+            "PK": "AUDIT#newfeature",
+            "SK": "LOGS#2026-01-01T10:00:00Z",
+            "action": "CREATE",
+            "actor": "ADMIN",
+            "old_value": None,
+            "new_value": {"enabled": True},
+        }
+    ]
+
+    result = map_audit_items(items)
+
+    assert result == [
+        {
+            "action": "CREATE",
+            "actor": "ADMIN",
+            "old": None,
+            "new": {"enabled": True},
+            "timestamp": "2026-01-01T10:00:00Z",
+        }
+    ]
+
+def test_map_audit_items_empty():
+    assert map_audit_items([]) == []
+
+

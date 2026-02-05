@@ -83,7 +83,8 @@ Resources:
                   - dynamodb:UpdateItem
                   - dynamodb:DeleteItem
                   - dynamodb:Query
-                  - dynamodb:Scan
+                  - dynamodb:TransactWriteItems
+                  - dynamodb:TransactGetItems
                 Resource: !Ref ExistingDdbTableArn
 
               - Effect: Allow
@@ -107,7 +108,7 @@ Resources:
   Signup:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: AuthSignup
+      FunctionName: AuthSignup2
       CodeUri: ../app/src
       Handler: handlers.auth.signup_handler.main.handler
       Role: !GetAtt FeatureFlagExecutionRole.Arn
@@ -123,7 +124,7 @@ Resources:
   Login:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: AuthLogin
+      FunctionName: AuthLogin2
       CodeUri: ../app/src
       Handler: handlers.auth.login_handler.main.handler
       Role: !GetAtt FeatureFlagExecutionRole.Arn
@@ -139,7 +140,7 @@ Resources:
   CreateFeature:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: CreateFeature
+      FunctionName: CreateFeature2
       CodeUri: ../app/src
       Handler: handlers.features.create_feature.main.create_feature_handler
       Role: !GetAtt FeatureFlagExecutionRole.Arn
@@ -155,7 +156,7 @@ Resources:
   UpdateFeatureEnv:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: UpdateFeatureEnv
+      FunctionName: UpdateFeatureEnv2
       CodeUri: ../app/src
       Handler: handlers.features.update_feature_env.main.update_feature_env_handler
       Role: !GetAtt FeatureFlagExecutionRole.Arn
@@ -171,7 +172,7 @@ Resources:
   DeleteFeatureEnv:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: DeleteFeatureEnv
+      FunctionName: DeleteFeatureEnv2
       CodeUri: ../app/src
       Handler: handlers.features.delete_feature_env.main.delete_feature_env_handler
       Role: !GetAtt FeatureFlagExecutionRole.Arn
@@ -187,7 +188,7 @@ Resources:
   DeleteFeature:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: DeleteFeature
+      FunctionName: DeleteFeature2
       CodeUri: ../app/src
       Handler: handlers.features.delete_feature.main.delete_feature_handler
       Role: !GetAtt FeatureFlagExecutionRole.Arn
@@ -203,7 +204,7 @@ Resources:
   GetFeature:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: GetFeature
+      FunctionName: GetFeature2
       CodeUri: ../app/src
       Handler: handlers.features.get_feature.main.get_feature_handler
       Role: !GetAtt FeatureFlagExecutionRole.Arn
@@ -219,7 +220,7 @@ Resources:
   EvaluateFeature:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: EvaluateFeature
+      FunctionName: EvaluateFeature2
       CodeUri: ../app/src
       Handler: handlers.evaluate.main.evaluate_feature_handler
       Role: !GetAtt FeatureFlagExecutionRole.Arn
@@ -235,7 +236,7 @@ Resources:
   GetAuditLogs:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: GetAuditLogs
+      FunctionName: GetAuditLogs2
       CodeUri: ../app/src
       Handler: handlers.features.audit.get_audit.main.get_feature_audit_handler
       Role: !GetAtt FeatureFlagExecutionRole.Arn
@@ -251,7 +252,7 @@ Resources:
   ListFeatures:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: ListFeatures
+      FunctionName: ListFeatures2
       CodeUri: ../app/src
       Handler: handlers.features.list_features.main.list_features_handler
       Role: !GetAtt FeatureFlagExecutionRole.Arn
@@ -268,7 +269,7 @@ Resources:
   AuditConsumer:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: AuditConsumer
+      FunctionName: AuditConsumer2
       CodeUri: ../app/src
       Handler: handlers.features.audit.consumer.main.handler
       Role: !GetAtt FeatureFlagExecutionRole.Arn

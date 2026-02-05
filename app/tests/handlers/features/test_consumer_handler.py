@@ -10,7 +10,7 @@ class TestAuditConsumer(unittest.TestCase):
     @patch("src.handlers.features.audit.consumer.main.table")
     def test_audit_consumer_success_single_record(self, mock_table):
         event = {
-            "Records": [
+                "Records": [
                 {
                     "body": json.dumps({
                         "feature": "NewFeature",
@@ -28,15 +28,15 @@ class TestAuditConsumer(unittest.TestCase):
 
         mock_table.put_item.assert_called_once_with(
             Item={
-                "PK": "FEATURE#newfeature",
-                "SK": "AUDIT#2026-01-01T10:00:00Z",
+                "PK": "AUDIT#newfeature",
+                "SK": "LOGS#2026-01-01T10:00:00Z",
                 "action": "CREATE",
                 "actor": "ADMIN",
                 "old_value": None,
                 "new_value": {"enabled": True},
-                "created_at": "2026-01-01T10:00:00Z",
             }
         )
+
 
     @patch("src.handlers.features.audit.consumer.main.table")
     def test_audit_consumer_multiple_records(self, mock_table):

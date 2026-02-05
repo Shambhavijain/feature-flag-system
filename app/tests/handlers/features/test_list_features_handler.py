@@ -76,19 +76,6 @@ class TestListFeaturesHandler(unittest.TestCase):
 
     @patch("src.handlers.features.list_features.main.get_current_user")
     @patch("src.handlers.features.list_features.main.require_admin")
-    def test_list_features_not_admin(self, mock_require_admin, mock_get_user):
-        mock_get_user.return_value = self.normal_user
-        mock_require_admin.side_effect = AppException(
-            "Admin access required", 403
-        )
-
-        response = list_features_handler(self.valid_event, {})
-
-        self.assertEqual(response["statusCode"], 403)
-
-
-    @patch("src.handlers.features.list_features.main.get_current_user")
-    @patch("src.handlers.features.list_features.main.require_admin")
     def test_list_features_empty(
         self, mock_require_admin, mock_get_user
     ):

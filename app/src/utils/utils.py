@@ -2,9 +2,10 @@ import bcrypt
 from dotenv import load_dotenv
 from typing import Dict, Any
 from jose import jwt, JWTError, ExpiredSignatureError
+from passlib.context import CryptContext
 
 from infra.config import get_env
-from passlib.context import CryptContext
+from error_handling.exceptions import UnauthorizedException
 
 
 load_dotenv()
@@ -45,9 +46,9 @@ def verify_jwt(token: str) -> Dict[str, Any]:
             algorithms=[JWT_ALGORITHM],
         )
     except ExpiredSignatureError:
-        raise ValueError("Token expired")
+        raise UnauthorizedException("Token expired")
     except JWTError:
-        raise ValueError("Invalid token")
+        raise UnauthorizedException("Invalid token")
 
 
 def map_env_for_audit(item: dict | None) -> dict | None:
@@ -62,41 +63,38 @@ def map_env_for_audit(item: dict | None) -> dict | None:
     }
 
 
-def map_feature_items(items: list[dict]) -> dict:
+def map_feature_items(
+    feature_item: dict,
+    env_items: list[dict]
+) -> dict:
     feature = {
-        "feature": None,
-        "description": None,
+        "feature": feature_item["SK"].replace("FEATURE#", ""),
+        "description": feature_item.get("description"),
+        "created_at": feature_item.get("created_at"),
         "environments": {},
     }
 
-    for item in items:
-        sk = item["SK"]
-
-        if sk == "META":
-            feature["feature"] = item["PK"].replace("FEATURE#", "")
-            feature["description"] = item.get("description")
-
-        elif sk.startswith("ENV#"):
-            env = sk.replace("ENV#", "")
-            feature["environments"][env] = {
-                "enabled": item["enabled"],
-                "rollout_end_at": item.get("rollout_end_at"),
-                "updated_at": item.get("updated_at"),
-            }
-            
-    if feature["feature"] is None:
-        return None        
+    for env in env_items:
+        env_name = env["SK"].replace("ENV#", "")
+        feature["environments"][env_name] = {
+            "enabled": env["enabled"],
+            "rollout_end_at": env.get("rollout_end_at"),
+            "updated_at": env.get("updated_at"),
+        }
 
     return feature
+
+
 
 def map_audit_items(items: list[dict]) -> list[dict]:
     return [
         {
-            "action": i["action"],
-            "actor": i["actor"],
-            "old": i.get("old_value"),
-            "new": i.get("new_value"),
-            "timestamp": i["created_at"],
+            "action": item["action"],
+            "actor": item["actor"],
+            "old": item.get("old_value"),
+            "new": item.get("new_value"),
+            "timestamp": item["SK"].replace("LOGS#", ""),
         }
-        for i in items
+        for item in items
     ]
+

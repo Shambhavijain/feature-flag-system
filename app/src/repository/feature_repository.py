@@ -1,4 +1,6 @@
 from botocore.exceptions import ClientError
+from boto3.dynamodb.conditions import Key
+
 from datetime import datetime, timezone
 
 from error_handling.exceptions import (
@@ -26,8 +28,8 @@ class FeatureRepository:
             "Put": {
                 "TableName": self.table.name,
                 "Item": {
-                    "PK": f"FEATURE#{feature_name}",
-                    "SK": "META",
+                    "PK": "FEATURES",
+                    "SK": f"FEATURE#{feature_name}",
                     "description": description,
                     "created_at": now,
                 },
@@ -41,7 +43,7 @@ class FeatureRepository:
                 "Put": {
                     "TableName": self.table.name,
                     "Item": {
-                        "PK": f"FEATURE#{feature_name}",
+                        "PK": f"ENVIRONMENT#{feature_name}",
                         "SK": f"ENV#{env.lower()}",
                         "environment": env.lower(),
                         "enabled": enabled,
@@ -74,7 +76,7 @@ class FeatureRepository:
         try:
             self.table.update_item(
                 Key={
-                    "PK": f"FEATURE#{feature_name}",
+                    "PK": f"ENVIRONMENT#{feature_name}",
                     "SK": f"ENV#{env}",
                 },
                 UpdateExpression="""
@@ -97,7 +99,7 @@ class FeatureRepository:
     def get_env(self, feature_name: str, env: str):
         response = self.table.get_item(
             Key={
-                "PK": f"FEATURE#{feature_name.lower()}",
+                "PK": f"ENVIRONMENT#{feature_name.lower()}",
                 "SK": f"ENV#{env.lower()}",
             }
         )
@@ -107,7 +109,7 @@ class FeatureRepository:
         try:
             self.table.delete_item(
                 Key={
-                    "PK": f"FEATURE#{feature_name.lower()}",
+                    "PK": f"ENVIRONMENT#{feature_name.lower()}",
                     "SK": f"ENV#{env.lower()}",
                 },
                 ConditionExpression="attribute_exists(PK) AND attribute_exists(SK)",
@@ -118,50 +120,110 @@ class FeatureRepository:
             raise
 
     def delete_feature(self, feature_name: str):
-        pk = f"FEATURE#{feature_name.lower()}"
+        feature_name = feature_name.lower()
+
+        transact_items = [
+            {
+                "Delete": {
+                    "TableName": self.table.name,
+                    "Key": {
+                        "PK": "FEATURES",
+                        "SK": f"FEATURE#{feature_name}",
+                    },
+                    "ConditionExpression": "attribute_exists(PK)",
+                }
+            }
+        ]
 
         response = self.table.query(
             KeyConditionExpression="PK = :pk",
-            ExpressionAttributeValues={":pk": pk},
+            ExpressionAttributeValues={
+                ":pk": f"ENVIRONMENT#{feature_name}",
+            },
         )
 
-        items = response.get("Items", [])
-
-        with self.table.batch_writer() as batch:
-            for item in items:
-                if item["SK"].startswith("AUDIT#"):
-                    continue
-                batch.delete_item(
-                    Key={
+        for item in response.get("Items", []):
+            transact_items.append({
+                "Delete": {
+                    "TableName": self.table.name,
+                    "Key": {
                         "PK": item["PK"],
                         "SK": item["SK"],
-                    }
-                )
+                    },
+                    "ConditionExpression": "attribute_exists(PK)",
+                }
+            })
 
-    def get_feature_items(self, feature_name: str):
+        self.table.meta.client.transact_write_items(
+            TransactItems=transact_items
+        )
+
+
+    # def get_feature_items(self, feature_name: str):
+    #     feature_name = feature_name.lower()
+    #     items = []
+
+    #     feature_response = self.table.get_item(
+    #         Key={
+    #             "PK": "FEATURES",
+    #             "SK": f"FEATURE#{feature_name}",
+    #         }
+    #     )
+
+    #     if "Item" in feature_response:
+    #         items.append(feature_response["Item"])
+
+    #     env_response = self.table.query(
+    #         KeyConditionExpression=Key("PK").eq(f"ENVIRONMENT#{feature_name}")
+    #     )
+
+    #     items.extend(env_response.get("Items", []))
+    #     return items
+
+
+    def get_audit_logs(self, feature_name: str):
+        feature_name = feature_name.lower()
+
+        response = self.table.query(
+            KeyConditionExpression="PK = :pk AND begins_with(SK, :sk)",
+            ExpressionAttributeValues={
+                ":pk": f"AUDIT#{feature_name}",
+                ":sk": "LOGS#",
+            },
+        )
+        return response.get("Items", [])
+
+    def list_features(self):
         response = self.table.query(
             KeyConditionExpression="PK = :pk",
             ExpressionAttributeValues={
-                ":pk": f"FEATURE#{feature_name.lower()}",
+                ":pk": "FEATURES",
             },
-        )
-        return response.get("Items", [])
-
-    def get_audit_logs(self, feature_name: str):
-        response = self.table.query(
-            KeyConditionExpression="PK = :pk AND begins_with(SK, :audit)",
-            ExpressionAttributeValues={
-                ":pk": f"FEATURE#{feature_name.lower()}",
-                ":audit": "AUDIT#",
-            },
-        )
-        return response.get("Items", [])
-    def list_features(self):
-        response = self.table.scan(
-            FilterExpression="SK = :meta",
-            ExpressionAttributeValues={
-                ":meta": "META"
-            }
         )
         return response.get("Items", [])
     
+    def get_feature_details(self, feature_name: str) -> dict | None:
+        feature_name = feature_name.lower()
+
+        response = self.table.get_item(
+            Key={
+                "PK": "FEATURES",
+                "SK": f"FEATURE#{feature_name}",
+            }
+        )
+
+        return response.get("Item")
+
+    from boto3.dynamodb.conditions import Key
+
+    def get_feature_envs(self, feature_name: str) -> list[dict]:
+        feature_name = feature_name.lower()
+
+        response = self.table.query(
+            KeyConditionExpression=Key("PK").eq(
+                f"ENVIRONMENT#{feature_name}"
+            )
+        )
+
+        return response.get("Items", [])
+

@@ -64,11 +64,13 @@ class FeatureService:
     def delete_feature(self, feature_name: str, actor: str):
         feature_name = feature_name.lower()
 
-        existing_items = self.repo.get_feature_items(feature_name)
-        if not existing_items:
+        feature_item = self.repo.get_feature_details(feature_name)
+        if not feature_item:
             raise FeatureNotFoundException(feature_name)
 
-        previous_audit =  map_feature_items(existing_items)
+        env_items = self.repo.get_feature_envs(feature_name)
+
+        previous_audit = map_feature_items(feature_item, env_items)
 
         publish_audit(
             feature=feature_name,
@@ -80,30 +82,30 @@ class FeatureService:
 
         self.repo.delete_feature(feature_name)
 
+
     def get_feature(self, feature_name: str):
         feature_name = feature_name.lower()
 
-        items = self.repo.get_feature_items(feature_name)
-        if not items:
+        feature_item = self.repo.get_feature_details(feature_name)
+        if not feature_item:
             raise FeatureNotFoundException(feature_name)
 
-        feature = map_feature_items(items)
-        if not feature:
-            raise FeatureNotFoundException(feature_name)
+        env_items = self.repo.get_feature_envs(feature_name)
 
-        return feature
+        return map_feature_items(feature_item, env_items)
+
 
     def evaluate(self, request_evaluate: EvaluateDTO) -> bool:
         feature_name = request_evaluate.feature.lower()
         environment = request_evaluate.environment.value.lower()
 
-        feature_items = self.repo.get_feature_items(feature_name)
-        if not feature_items:
+        feature_item = self.repo.get_feature_details(feature_name)
+        if not feature_item:
             raise FeatureNotFoundException(feature_name)
 
         env_data = self.repo.get_env(feature_name, environment)
         if not env_data:
-            raise EnvironmentNotFoundException(feature_name,environment)
+            raise EnvironmentNotFoundException(feature_name, environment)
 
         rollout_end = env_data.get("rollout_end_at")
         if rollout_end:
@@ -136,6 +138,7 @@ class FeatureService:
                 return True
 
         return env_data["enabled"]
+
 
     def get_audit_logs(self, feature_name: str):
         feature_items = self.repo.get_audit_logs(feature_name.lower())
@@ -181,19 +184,19 @@ class FeatureService:
         results = []
 
         for item in items:
-            pk = item.get("PK")
+            sk = item.get("SK")
 
-       
-            if not pk or not pk.startswith("FEATURE#"):
+            if not sk or not sk.startswith("FEATURE#"):
                 continue
 
             results.append(
                 FeatureListItemDTO(
-                    name=pk.replace("FEATURE#", ""),
+                    name=sk.replace("FEATURE#", ""),
                     description=item.get("description"),
                     created_at=item.get("created_at"),
                 )
             )
 
         return results
+
 

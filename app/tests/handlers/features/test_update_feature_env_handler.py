@@ -102,7 +102,7 @@ class TestUpdateFeatureEnvHandler(unittest.TestCase):
 
         response = update_feature_env_handler(event, context={})
 
-        self.assertEqual(response["statusCode"], 500)
+        self.assertEqual(response["statusCode"], 401)
         self.mock_service.update_env.assert_not_called()
 
     def test_update_feature_env_missing_fields(self):
@@ -113,7 +113,7 @@ class TestUpdateFeatureEnvHandler(unittest.TestCase):
 
         response = update_feature_env_handler(event, context={})
 
-        self.assertEqual(response["statusCode"], 500)
+        self.assertEqual(response["statusCode"], 401)
         self.mock_service.update_env.assert_not_called()
 
     @patch("src.handlers.features.update_feature_env.main.get_current_user")
