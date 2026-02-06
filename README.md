@@ -38,18 +38,6 @@ It allows admin to create, manage and audit feature flags across multiple enviro
 
 - The Feature Flag System follows a serverless, event-driven architecture using AWS services.
 
-Client
-↓
-API Gateway (HTTP API)
-↓
-Lambda (Feature APIs)
-├── DynamoDB (Feature Store)
-└── SQS (Audit Queue)
-↓
-Lambda (Audit Consumer)
-↓
-DynamoDB (Audit Logs)
-
 <img width="988" height="568" alt="Screenshot 2026-02-06 141256" src="https://github.com/user-attachments/assets/69af5cae-57a6-4048-85e7-f668289bf5ef" />
 
 ## DynamoDB Single Table Design
