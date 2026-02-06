@@ -1,0 +1,404 @@
+openapi: 3.0.3
+
+info:
+  title: Feature Flag Management System API
+  description: >
+    Serverless Feature Flag Management System built using AWS Lambda, API Gateway,
+    DynamoDB single-table design, and SQS for audit logging.
+  version: 1.0.0
+
+servers:
+  - url: https://{apiId}.execute-api.{region}.amazonaws.com/Dev
+    variables:
+      apiId:
+        default: YOUR_API_ID
+      region:
+        default: us-east-1
+
+tags:
+  - name: Auth
+  - name: Features
+  - name: Evaluation
+  - name: Audit
+
+security:
+  - BearerAuth: []
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          example: Feature 'enablebetadashboard' not found
+
+    EnvMessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Environment Removed
+
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Feature Deleted
+
+    SignupRequest:
+      type: object
+      required: [email, password, role]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+        username:
+          type: string
+        role:
+          type: string
+          enum: [ADMIN, CLIENT]
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+
+    FeatureCreateRequest:
+      type: object
+      required: [name, description, environments]
+      properties:
+        name:
+          type: string
+          example: EnableBetaDashboard
+        description:
+          type: string
+          example: Beta dashboard toggle
+        environments:
+          type: object
+          additionalProperties:
+            type: boolean
+          example:
+            dev: true
+            qa: false
+            prod: false
+
+    FeatureEnvUpdateRequest:
+      type: object
+      required: [enabled]
+      properties:
+        enabled:
+          type: boolean
+
+    FeatureResponse:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+
+    EnvironmentConfig:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        rollout_end_at:
+          type: string
+          format: date-time
+          nullable: true
+        updated_at:
+          type: string
+          format: date-time
+
+    GetFeatureResponse:
+      type: object
+      properties:
+        feature:
+          type: string
+          example: enablebetadashboard
+        description:
+          type: string
+          example: Beta dashboard toggle
+        created_at:
+          type: string
+          format: date-time
+        environments:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/EnvironmentConfig"
+
+    ### Evaluation
+
+    EvaluateRequest:
+      type: object
+      required: [feature, env]
+      properties:
+        feature:
+          type: string
+        env:
+          type: string
+
+    EvaluateResponse:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+
+    ### Audit
+
+    AuditLog:
+      type: object
+      required:
+        - action
+        - actor
+        - timestamp
+      properties:
+        action:
+          type: string
+          description: Type of audit action
+          example: CREATE_FEATURE
+        actor:
+          type: string
+          description: Who performed the action
+          example: ADMIN
+        old:
+          description: State before the action
+          nullable: true
+          oneOf:
+            - type: object
+            - type: string
+          example: null
+        new:
+          description: State after the action
+          nullable: true
+          oneOf:
+            - type: object
+            - type: string
+          example:
+            enabled: true
+            environment: prod
+paths:
+  /auth/signup:
+    post:
+      tags: [Auth]
+      summary: Client signup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignupRequest"
+      responses:
+        "201":
+          description: User created
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: User login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: JWT issued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Unauthorized
+
+  /features:
+    post:
+      tags: [Features]
+      summary: Create feature flag (ADMIN)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FeatureCreateRequest"
+      responses:
+        "201":
+          description: Feature created
+        "403":
+          description: Forbidden
+
+    get:
+      tags: [Features]
+      summary: List all features
+      responses:
+        "200":
+          description: List of features
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FeatureResponse"
+
+  /features/{flag}:
+    get:
+      tags: [Features]
+      summary: Get feature details (ADMIN)
+      parameters:
+        - name: flag
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Feature details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetFeatureResponse"
+        "404":
+          description: Feature not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    delete:
+      tags: [Features]
+      summary: Delete feature (ADMIN)
+      parameters:
+        - name: flag
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Feature deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /features/{flag}/env/{env}:
+    put:
+      tags: [Features]
+      summary: Update feature environment (ADMIN)
+      parameters:
+        - name: flag
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: env
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FeatureEnvUpdateRequest"
+      responses:
+        "200":
+          description: Environment updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "404":
+          description: Feature or environment not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    delete:
+      tags: [Features]
+      summary: Delete feature environment (ADMIN)
+      parameters:
+        - name: flag
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: env
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Environment removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvMessageResponse"
+
+  /features/evaluate:
+    post:
+      tags: [Evaluation]
+      summary: Evaluate feature for environment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EvaluateRequest"
+      responses:
+        "200":
+          description: Evaluation result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EvaluateResponse"
+
+  /features/{flag}/audit:
+    get:
+      tags: [Audit]
+      summary: Get audit logs for a feature (ADMIN)
+      parameters:
+        - name: flag
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Audit logs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AuditLog"
