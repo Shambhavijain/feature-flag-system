@@ -109,12 +109,9 @@ class FeatureService:
 
         rollout_end = env_data.get("rollout_end_at")
         if rollout_end:
-            now = datetime.now(timezone.utc)
-            rollout_time = datetime.fromisoformat(
-                rollout_end.replace("Z", "")
-            ).replace(tzinfo=timezone.utc)
+            now = int(datetime.now(timezone.utc).timestamp())
 
-            if now >= rollout_time:
+            if now >= rollout_end:
                 if not env_data["enabled"]:
                     self.repo.put_env(
                         feature_name=feature_name,
@@ -185,9 +182,6 @@ class FeatureService:
 
         for item in items:
             sk = item.get("SK")
-
-            if not sk or not sk.startswith("FEATURE#"):
-                continue
 
             results.append(
                 FeatureListItemDTO(

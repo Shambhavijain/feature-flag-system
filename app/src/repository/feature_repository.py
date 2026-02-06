@@ -1,6 +1,5 @@
 from botocore.exceptions import ClientError
 from boto3.dynamodb.conditions import Key
-
 from datetime import datetime, timezone
 
 from error_handling.exceptions import (
@@ -20,7 +19,7 @@ class FeatureRepository:
         environments: dict[str, bool],
     ):
         feature_name = feature_name.lower()
-        now = datetime.now(timezone.utc).isoformat()
+        now = int(datetime.now(timezone.utc).timestamp())
 
         transact_items = []
 
@@ -88,7 +87,7 @@ class FeatureRepository:
                 ExpressionAttributeValues={
                     ":enabled": enabled,
                     ":rollout": rollout_end_at,
-                    ":updated": datetime.now(timezone.utc).isoformat(),
+                    ":updated": int(datetime.now(timezone.utc).timestamp()),
                 },
             )
         except ClientError as e:
@@ -158,29 +157,6 @@ class FeatureRepository:
             TransactItems=transact_items
         )
 
-
-    # def get_feature_items(self, feature_name: str):
-    #     feature_name = feature_name.lower()
-    #     items = []
-
-    #     feature_response = self.table.get_item(
-    #         Key={
-    #             "PK": "FEATURES",
-    #             "SK": f"FEATURE#{feature_name}",
-    #         }
-    #     )
-
-    #     if "Item" in feature_response:
-    #         items.append(feature_response["Item"])
-
-    #     env_response = self.table.query(
-    #         KeyConditionExpression=Key("PK").eq(f"ENVIRONMENT#{feature_name}")
-    #     )
-
-    #     items.extend(env_response.get("Items", []))
-    #     return items
-
-
     def get_audit_logs(self, feature_name: str):
         feature_name = feature_name.lower()
 
@@ -214,7 +190,6 @@ class FeatureRepository:
 
         return response.get("Item")
 
-    from boto3.dynamodb.conditions import Key
 
     def get_feature_envs(self, feature_name: str) -> list[dict]:
         feature_name = feature_name.lower()

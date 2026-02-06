@@ -7,7 +7,7 @@ from enums.enums import Environment
 class FeatureMeta:
     name: str
     description: str
-    created_at: str
+    created_at: int
 
 @dataclass
 class FeatureEnv:
@@ -15,4 +15,4 @@ class FeatureEnv:
     environment: Environment
     enabled: bool
     rollout_end_at: Optional[str] 
-    updated_at: str
+    updated_at: int
