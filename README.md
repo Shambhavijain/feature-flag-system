@@ -1,3 +1,4 @@
+
 # Feature Flag Management System
 
 A backend **Feature Flag Management System** built using **AWS Serverless architecture**.  
@@ -48,6 +49,8 @@ Lambda (Feature APIs)
 Lambda (Audit Consumer)
 ↓
 DynamoDB (Audit Logs)
+
+<img width="988" height="568" alt="Screenshot 2026-02-06 141256" src="https://github.com/user-attachments/assets/69af5cae-57a6-4048-85e7-f668289bf5ef" />
 
 ## DynamoDB Single Table Design
 
