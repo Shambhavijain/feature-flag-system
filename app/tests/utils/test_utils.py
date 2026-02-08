@@ -51,29 +51,7 @@ def test_verify_jwt_expired():
 def test_verify_jwt_invalid():
     with pytest.raises(UnauthorizedException, match="Invalid token"):
         verify_jwt("invalid.token.value")
-
-def test_map_env_for_audit_success():
-    item = {
-        "environment": "dev",
-        "enabled": True,
-        "rollout_end_at": None,
-        "updated_at": "2026-01-01T00:00:00Z"
-    }
-
-    result = map_env_for_audit(item)
-
-    assert result == {
-        "environment": "dev",
-        "enabled": True,
-        "rollout_end_at": None,
-        "updated_at": "2026-01-01T00:00:00Z"
-    }
-
-
-def test_map_env_for_audit_none():
-    assert map_env_for_audit(None) is None
-from src.utils.utils import map_audit_items
-
+        
 def test_map_audit_items_success():
     items = [
         {

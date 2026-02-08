@@ -3,7 +3,8 @@ from datetime import datetime, timezone
 from repository.feature_repository import FeatureRepository
 from enums.actions import AuditAction
 from utils.audit import publish_audit
-from utils.utils import map_env_for_audit, map_feature_items, map_audit_items
+from utils.utils import map_env_for_audit, map_audit_items
+from models.feature_model import Feature, FeatureEnv, AuditLog
 from dto.feature_dto import (
     CreateFeatureDTO,
     UpdateFeatureEnvDTO,
@@ -21,7 +22,7 @@ class FeatureService:
     def __init__(self, repo: FeatureRepository):
         self.repo = repo
  
-    def create_feature(self, request_feature: CreateFeatureDTO, actor: str):
+    def create_feature(self, request_feature: CreateFeatureDTO, actor: str)->None:
         feature_name = request_feature.name.lower()
 
         self.repo.create_feature(
@@ -41,10 +42,10 @@ class FeatureService:
             },
         )
   
-    def remove_env(self, feature_name: str, environment: str, actor: str):
+    def remove_env(self, feature_name: str, environment: str, actor: str)->None:
         feature_name = feature_name.lower()
         environment = environment.lower()
-        existing_env = self.repo.get_env(feature_name, environment)
+        existing_env: FeatureEnv | None = self.repo.get_env(feature_name, environment)
 
         if not existing_env:
             raise EnvironmentNotFoundException(feature_name,environment)
@@ -61,16 +62,28 @@ class FeatureService:
             new=None,
         )
 
-    def delete_feature(self, feature_name: str, actor: str):
+    def delete_feature(self, feature_name: str, actor: str)->None:
         feature_name = feature_name.lower()
 
-        feature_item = self.repo.get_feature_details(feature_name)
-        if not feature_item:
+        meta = self.repo.get_feature_details(feature_name)
+        if not meta:
             raise FeatureNotFoundException(feature_name)
 
-        env_items = self.repo.get_feature_envs(feature_name)
+        envs = self.repo.get_feature_envs(feature_name)
 
-        previous_audit = map_feature_items(feature_item, env_items)
+        previous_audit = {
+            "feature": meta.name,
+            "description": meta.description,
+            "created_at": meta.created_at,
+            "environments": {
+                env.environment.value: {
+                    "enabled": env.enabled,
+                    "rollout_end_at": env.rollout_end_at,
+                    "updated_at": env.updated_at,
+                }
+                for env in envs
+            },
+        }
 
         publish_audit(
             feature=feature_name,
@@ -83,17 +96,20 @@ class FeatureService:
         self.repo.delete_feature(feature_name)
 
 
-    def get_feature(self, feature_name: str):
+
+    def get_feature(self, feature_name: str) -> Feature:
         feature_name = feature_name.lower()
 
-        feature_item = self.repo.get_feature_details(feature_name)
-        if not feature_item:
+        meta = self.repo.get_feature_details(feature_name)
+        if not meta:
             raise FeatureNotFoundException(feature_name)
 
-        env_items = self.repo.get_feature_envs(feature_name)
+        envs = self.repo.get_feature_envs(feature_name)
 
-        return map_feature_items(feature_item, env_items)
-
+        return Feature(
+            meta=meta,
+            environments={env.environment: env for env in envs},
+        )
 
     def evaluate(self, request_evaluate: EvaluateDTO) -> bool:
         feature_name = request_evaluate.feature.lower()
@@ -103,24 +119,23 @@ class FeatureService:
         if not feature_item:
             raise FeatureNotFoundException(feature_name)
 
-        env_data = self.repo.get_env(feature_name, environment)
+        env_data: FeatureEnv | None = self.repo.get_env(feature_name, environment)
         if not env_data:
             raise EnvironmentNotFoundException(feature_name, environment)
 
-        rollout_end = env_data.get("rollout_end_at")
+        rollout_end = env_data.rollout_end_at
         if rollout_end:
             now = int(datetime.now(timezone.utc).timestamp())
 
             if now >= rollout_end:
-                if not env_data["enabled"]:
+                if not env_data.enabled:
+                    previous_audit = map_env_for_audit(env_data)
                     self.repo.put_env(
                         feature_name=feature_name,
                         env=environment,
                         enabled=True,
                         rollout_end_at=None,
                     )
-
-                    previous_audit = map_env_for_audit(env_data)
 
                     publish_audit(
                         feature=feature_name,
@@ -134,10 +149,10 @@ class FeatureService:
                     )
                 return True
 
-        return env_data["enabled"]
+        return env_data.enabled
 
 
-    def get_audit_logs(self, feature_name: str):
+    def get_audit_logs(self, feature_name: str)-> list[AuditLog]:
         feature_items = self.repo.get_audit_logs(feature_name.lower())
         return map_audit_items(feature_items)
   
@@ -147,10 +162,10 @@ class FeatureService:
         environment: str,
         request_feature: UpdateFeatureEnvDTO,
         actor: str,
-    ):
+    )->None:
         feature_name = feature_name.lower()
         environment = environment.lower()
-        raw_existing_env = self.repo.get_env(feature_name, environment)
+        raw_existing_env: FeatureEnv | None = self.repo.get_env(feature_name, environment)
         if not raw_existing_env:
             raise EnvironmentNotFoundException(feature_name,environment)
 
@@ -176,21 +191,16 @@ class FeatureService:
             new=current_audit,
         )
 
-    def list_features(self):
-        items = self.repo.list_features()
-        results = []
+    def list_features(self)-> list[FeatureListItemDTO]:
+        features = self.repo.get_features()
 
-        for item in items:
-            sk = item.get("SK")
-
-            results.append(
-                FeatureListItemDTO(
-                    name=sk.replace("FEATURE#", ""),
-                    description=item.get("description"),
-                    created_at=item.get("created_at"),
-                )
+        return [
+            FeatureListItemDTO(
+                name=feature.name,
+                description=feature.description,
+                created_at=feature.created_at,
             )
-
-        return results
+            for feature in features
+        ]
 
 

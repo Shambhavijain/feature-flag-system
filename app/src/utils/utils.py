@@ -6,6 +6,7 @@ from passlib.context import CryptContext
 
 from infra.config import get_env
 from error_handling.exceptions import UnauthorizedException
+from models.feature_model import FeatureEnv
 
 
 load_dotenv()
@@ -51,40 +52,13 @@ def verify_jwt(token: str) -> Dict[str, Any]:
         raise UnauthorizedException("Invalid token")
 
 
-def map_env_for_audit(item: dict | None) -> dict | None:
-    if not item:
-        return None
-
+def map_env_for_audit(env: FeatureEnv) -> dict:
     return {
-        "environment": item["environment"],
-        "enabled": item["enabled"],
-        "rollout_end_at": item.get("rollout_end_at"),
-        "updated_at": item.get("updated_at"),
+        "environment": env.environment.value,
+        "enabled": env.enabled,
+        "rollout_end_at": env.rollout_end_at,
+        "updated_at": env.updated_at,
     }
-
-
-def map_feature_items(
-    feature_item: dict,
-    env_items: list[dict]
-) -> dict:
-    feature = {
-        "feature": feature_item["SK"].replace("FEATURE#", ""),
-        "description": feature_item.get("description"),
-        "created_at": feature_item.get("created_at"),
-        "environments": {},
-    }
-
-    for env in env_items:
-        env_name = env["SK"].replace("ENV#", "")
-        feature["environments"][env_name] = {
-            "enabled": env["enabled"],
-            "rollout_end_at": env.get("rollout_end_at"),
-            "updated_at": env.get("updated_at"),
-        }
-
-    return feature
-
-
 
 def map_audit_items(items: list[dict]) -> list[dict]:
     return [
