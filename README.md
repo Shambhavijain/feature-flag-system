@@ -21,7 +21,7 @@ It allows admin to create, manage and audit feature flags across multiple enviro
 
 ### 🔹 Feature Flags
 
-- Enable/Disable features dynamically without redeployemnet.
+- Enable/Disable features dynamically without redeployment.
 - Supports environment-based flags (dev, qa, prod)
 - Allow Clients to evaluate flags.
 - Maintain audit logs

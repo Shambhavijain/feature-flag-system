@@ -30,7 +30,6 @@ Globals:
         JWT_ALGORITHM: HS256
 
 Resources:
-
   FeatureFlagHTTPApi:
     Type: AWS::Serverless::HttpApi
     Properties:
@@ -68,6 +67,12 @@ Resources:
               - Effect: Allow
                 Action: secretsmanager:GetSecretValue
                 Resource: !Ref ExistingJWTSecretArn
+
+              - Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                  - dynamodb:GetItem
+                Resource: !Ref ExistingDdbTableArn
 
   FeatureExecutionRole:
     Type: AWS::IAM::Role
@@ -130,6 +135,11 @@ Resources:
                   - sqs:GetQueueAttributes
                   - sqs:ChangeMessageVisibility
                 Resource: !Ref ExistingAuditQueueArn
+
+              - Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                Resource: !Ref ExistingDdbTableArn
 
   Signup:
     Type: AWS::Serverless::Function

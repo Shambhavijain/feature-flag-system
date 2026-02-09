@@ -1,5 +1,4 @@
 import json
-from decimal import Decimal
 
 
 def success_response(data,status_code=200):
