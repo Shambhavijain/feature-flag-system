@@ -1,11 +1,10 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
-Description: Feature Flag Management System with Auth and Audit (SQS) - using HTTP API (payload v1.0)
+Description: Feature Flag Management System with Auth and Audit (Least Privilege)
 
 Parameters:
   ExistingJWTSecretArn:
     Type: String
-    Description: ARN of the existing JWT secret in Secrets Manager (us-east-1)
   ExistingDdbTableArn:
     Type: String
   ExistingDdbTableName:
@@ -21,7 +20,7 @@ Globals:
     Timeout: 30
     Architectures:
       - x86_64
-    Layers:                       
+    Layers:
       - !Ref PythonDependenciesLayer
     Environment:
       Variables:
@@ -31,34 +30,25 @@ Globals:
         JWT_ALGORITHM: HS256
 
 Resources:
+
   FeatureFlagHTTPApi:
     Type: AWS::Serverless::HttpApi
     Properties:
       StageName: Dev
       CorsConfiguration:
-        AllowMethods:
-          - GET
-          - POST
-          - PUT
-          - DELETE
-          - OPTIONS
-        AllowHeaders:
-          - Content-Type
-          - Authorization
-        AllowOrigins:
-          - "*"
+        AllowMethods: [GET, POST, PUT, DELETE, OPTIONS]
+        AllowHeaders: [Content-Type, Authorization]
+        AllowOrigins: ["*"]
 
   PythonDependenciesLayer:
     Type: AWS::Serverless::LayerVersion
     Properties:
       LayerName: feature-flag-common-deps
-      Description: Shared Python dependencies for Feature Flag system
       ContentUri: ../layer/
-      CompatibleRuntimes:
-        - python3.12
+      CompatibleRuntimes: [python3.12]
       RetentionPolicy: Retain
-        
-  FeatureFlagExecutionRole:
+
+  AuthExecutionRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -71,32 +61,68 @@ Resources:
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
       Policies:
-        - PolicyName: FeatureFlagPolicy
+        - PolicyName: AuthPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: secretsmanager:GetSecretValue
+                Resource: !Ref ExistingJWTSecretArn
+
+  FeatureExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: FeaturePolicy
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
               - Effect: Allow
                 Action:
-                  - dynamodb:BatchWriteItem
                   - dynamodb:PutItem
                   - dynamodb:GetItem
                   - dynamodb:UpdateItem
                   - dynamodb:DeleteItem
                   - dynamodb:Query
+                  - dynamodb:BatchWriteItem
                   - dynamodb:TransactWriteItems
                   - dynamodb:TransactGetItems
                 Resource: !Ref ExistingDdbTableArn
 
               - Effect: Allow
-                Action:
-                  - sqs:SendMessage
+                Action: sqs:SendMessage
                 Resource: !Ref ExistingAuditQueueArn
 
               - Effect: Allow
-                Action:
-                  - secretsmanager:GetSecretValue
+                Action: secretsmanager:GetSecretValue
                 Resource: !Ref ExistingJWTSecretArn
 
+  AuditConsumerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: AuditConsumerPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
               - Effect: Allow
                 Action:
                   - sqs:ReceiveMessage
@@ -111,15 +137,14 @@ Resources:
       FunctionName: AuthSignup2
       CodeUri: ../app/src
       Handler: handlers.auth.signup_handler.main.handler
-      Role: !GetAtt FeatureFlagExecutionRole.Arn
+      Role: !GetAtt AuthExecutionRole.Arn
       Events:
-        ApiEvent:
+        Api:
           Type: HttpApi
           Properties:
             ApiId: !Ref FeatureFlagHTTPApi
             Path: /auth/signup
             Method: POST
-            PayloadFormatVersion: "1.0"
 
   Login:
     Type: AWS::Serverless::Function
@@ -127,15 +152,14 @@ Resources:
       FunctionName: AuthLogin2
       CodeUri: ../app/src
       Handler: handlers.auth.login_handler.main.handler
-      Role: !GetAtt FeatureFlagExecutionRole.Arn
+      Role: !GetAtt AuthExecutionRole.Arn
       Events:
-        ApiEvent:
+        Api:
           Type: HttpApi
           Properties:
             ApiId: !Ref FeatureFlagHTTPApi
             Path: /auth/login
             Method: POST
-            PayloadFormatVersion: "1.0"
 
   CreateFeature:
     Type: AWS::Serverless::Function
@@ -143,15 +167,14 @@ Resources:
       FunctionName: CreateFeature2
       CodeUri: ../app/src
       Handler: handlers.features.create_feature.main.create_feature_handler
-      Role: !GetAtt FeatureFlagExecutionRole.Arn
+      Role: !GetAtt FeatureExecutionRole.Arn
       Events:
-        ApiEvent:
+        Api:
           Type: HttpApi
           Properties:
             ApiId: !Ref FeatureFlagHTTPApi
             Path: /features
             Method: POST
-            PayloadFormatVersion: "1.0"
 
   UpdateFeatureEnv:
     Type: AWS::Serverless::Function
@@ -159,15 +182,14 @@ Resources:
       FunctionName: UpdateFeatureEnv2
       CodeUri: ../app/src
       Handler: handlers.features.update_feature_env.main.update_feature_env_handler
-      Role: !GetAtt FeatureFlagExecutionRole.Arn
+      Role: !GetAtt FeatureExecutionRole.Arn
       Events:
-        ApiEvent:
+        Api:
           Type: HttpApi
           Properties:
             ApiId: !Ref FeatureFlagHTTPApi
             Path: /features/{flag}/env/{env}
             Method: PUT
-            PayloadFormatVersion: "1.0"
 
   DeleteFeatureEnv:
     Type: AWS::Serverless::Function
@@ -175,15 +197,14 @@ Resources:
       FunctionName: DeleteFeatureEnv2
       CodeUri: ../app/src
       Handler: handlers.features.delete_feature_env.main.delete_feature_env_handler
-      Role: !GetAtt FeatureFlagExecutionRole.Arn
+      Role: !GetAtt FeatureExecutionRole.Arn
       Events:
-        ApiEvent:
+        Api:
           Type: HttpApi
           Properties:
             ApiId: !Ref FeatureFlagHTTPApi
             Path: /features/{flag}/env/{env}
             Method: DELETE
-            PayloadFormatVersion: "1.0"
 
   DeleteFeature:
     Type: AWS::Serverless::Function
@@ -191,15 +212,14 @@ Resources:
       FunctionName: DeleteFeature2
       CodeUri: ../app/src
       Handler: handlers.features.delete_feature.main.delete_feature_handler
-      Role: !GetAtt FeatureFlagExecutionRole.Arn
+      Role: !GetAtt FeatureExecutionRole.Arn
       Events:
-        ApiEvent:
+        Api:
           Type: HttpApi
           Properties:
             ApiId: !Ref FeatureFlagHTTPApi
             Path: /features/{flag}
             Method: DELETE
-            PayloadFormatVersion: "1.0"
 
   GetFeature:
     Type: AWS::Serverless::Function
@@ -207,47 +227,14 @@ Resources:
       FunctionName: GetFeature2
       CodeUri: ../app/src
       Handler: handlers.features.get_feature.main.get_feature_handler
-      Role: !GetAtt FeatureFlagExecutionRole.Arn
+      Role: !GetAtt FeatureExecutionRole.Arn
       Events:
-        ApiEvent:
+        Api:
           Type: HttpApi
           Properties:
             ApiId: !Ref FeatureFlagHTTPApi
             Path: /features/{flag}
             Method: GET
-            PayloadFormatVersion: "1.0"
-
-  EvaluateFeature:
-    Type: AWS::Serverless::Function
-    Properties:
-      FunctionName: EvaluateFeature2
-      CodeUri: ../app/src
-      Handler: handlers.evaluate.main.evaluate_feature_handler
-      Role: !GetAtt FeatureFlagExecutionRole.Arn
-      Events:
-        ApiEvent:
-          Type: HttpApi
-          Properties:
-            ApiId: !Ref FeatureFlagHTTPApi
-            Path: /features/evaluate
-            Method: POST
-            PayloadFormatVersion: "1.0"
-
-  GetAuditLogs:
-    Type: AWS::Serverless::Function
-    Properties:
-      FunctionName: GetAuditLogs2
-      CodeUri: ../app/src
-      Handler: handlers.features.audit.get_audit.main.get_feature_audit_handler
-      Role: !GetAtt FeatureFlagExecutionRole.Arn
-      Events:
-        ApiEvent:
-          Type: HttpApi
-          Properties:
-            ApiId: !Ref FeatureFlagHTTPApi
-            Path: /features/{flag}/audit
-            Method: GET
-            PayloadFormatVersion: "1.0"
 
   ListFeatures:
     Type: AWS::Serverless::Function
@@ -255,16 +242,44 @@ Resources:
       FunctionName: ListFeatures2
       CodeUri: ../app/src
       Handler: handlers.features.list_features.main.list_features_handler
-      Role: !GetAtt FeatureFlagExecutionRole.Arn
+      Role: !GetAtt FeatureExecutionRole.Arn
       Events:
-        ApiEvent:
+        Api:
           Type: HttpApi
           Properties:
             ApiId: !Ref FeatureFlagHTTPApi
             Path: /features
             Method: GET
-            PayloadFormatVersion: "1.0"
-          
+
+  EvaluateFeature:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: EvaluateFeature2
+      CodeUri: ../app/src
+      Handler: handlers.evaluate.main.evaluate_feature_handler
+      Role: !GetAtt FeatureExecutionRole.Arn
+      Events:
+        Api:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref FeatureFlagHTTPApi
+            Path: /features/evaluate
+            Method: POST
+
+  GetAuditLogs:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: GetAuditLogs2
+      CodeUri: ../app/src
+      Handler: handlers.features.audit.get_audit.main.get_feature_audit_handler
+      Role: !GetAtt FeatureExecutionRole.Arn
+      Events:
+        Api:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref FeatureFlagHTTPApi
+            Path: /features/{flag}/audit
+            Method: GET
 
   AuditConsumer:
     Type: AWS::Serverless::Function
@@ -272,7 +287,7 @@ Resources:
       FunctionName: AuditConsumer2
       CodeUri: ../app/src
       Handler: handlers.features.audit.consumer.main.handler
-      Role: !GetAtt FeatureFlagExecutionRole.Arn
+      Role: !GetAtt AuditConsumerRole.Arn
       Events:
         SQSEvent:
           Type: SQS
