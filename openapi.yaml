@@ -108,6 +108,12 @@ components:
       properties:
         enabled:
           type: boolean
+        rollout_end_at:
+          type: integer
+          format: int64
+          description: Unix timestamp in seconds for automatic rollout (must be in future)
+          nullable: true
+          example: 1738887600
 
     FeatureResponse:
       type: object
@@ -147,24 +153,24 @@ components:
           additionalProperties:
             $ref: "#/components/schemas/EnvironmentConfig"
 
-    ### Evaluation
-
     EvaluateRequest:
       type: object
-      required: [feature, env]
+      required: [feature, environment]
       properties:
         feature:
           type: string
-        env:
+        environment:
           type: string
+          enum: [dev, qa, staging, prod]
+        context:
+          type: object
+          nullable: true
 
     EvaluateResponse:
       type: object
       properties:
         enabled:
           type: boolean
-
-    ### Audit
 
     AuditLog:
       type: object
