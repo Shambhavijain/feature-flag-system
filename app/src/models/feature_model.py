@@ -3,14 +3,14 @@ from typing import Optional, Dict
 from enums.enums import Environment
 
 
-@dataclass(slots=True)
+@dataclass
 class FeatureMeta:
     name: str
     description: Optional[str]
     created_at: int
 
 
-@dataclass(slots=True)
+@dataclass
 class FeatureEnv:
     feature_name: str
     environment: Environment
@@ -19,13 +19,13 @@ class FeatureEnv:
     updated_at: int
 
 
-@dataclass(slots=True)
+@dataclass
 class Feature:
     meta: FeatureMeta
     environments: Dict[Environment, FeatureEnv]
 
 
-@dataclass(slots=True)
+@dataclass
 class AuditLog:
     action: str
     actor: str
